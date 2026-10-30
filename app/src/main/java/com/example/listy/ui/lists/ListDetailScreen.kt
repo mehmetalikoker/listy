@@ -25,6 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +61,11 @@ import com.example.listy.R
 import com.example.listy.data.ListType
 import com.example.listy.data.Money
 import com.example.listy.data.Task
+import com.example.listy.data.dailyShare
+import com.example.listy.data.isCompleted
+import com.example.listy.data.paidAmount
+import com.example.listy.data.remainingAmount
+import java.time.LocalDate
 import com.example.listy.ui.theme.CardSurface
 import com.example.listy.ui.theme.ListyTheme
 import com.example.listy.ui.theme.TextPrimary
@@ -71,7 +78,7 @@ fun ListDetailScreen(
     type: ListType,
     tasks: List<Task>,
     onBack: () -> Unit,
-    onAddTask: (title: String, amount: Long?) -> Unit,
+    onAddTask: (title: String, amount: Long?, daily: Boolean) -> Unit,
     onToggleDone: (Long) -> Unit,
     onToggleImportant: (Long) -> Unit,
 ) {
@@ -80,9 +87,10 @@ fun ListDetailScreen(
 
     BackHandler(enabled = adding) { adding = false }
 
+    val today = LocalDate.now()
     // Yeni eklenen en üstte
-    val openTasks = tasks.filter { !it.done }.sortedByDescending { it.createdAt }
-    val doneTasks = tasks.filter { it.done }.sortedByDescending { it.createdAt }
+    val openTasks = tasks.filter { !it.isCompleted(today) }.sortedByDescending { it.createdAt }
+    val doneTasks = tasks.filter { it.isCompleted(today) }.sortedByDescending { it.createdAt }
     val isPayment = type == ListType.PAYMENT
 
     Box(
@@ -111,8 +119,8 @@ fun ListDetailScreen(
             )
             if (isPayment) {
                 PaymentSummary(
-                    remaining = openTasks.sumOf { it.amount ?: 0 },
-                    paid = doneTasks.sumOf { it.amount ?: 0 },
+                    remaining = tasks.sumOf { it.remainingAmount(today) },
+                    paid = tasks.sumOf { it.paidAmount(today) },
                 )
             }
 
@@ -122,7 +130,7 @@ fun ListDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 items(openTasks, key = { it.id }) { task ->
-                    TaskCard(task, onToggleDone, onToggleImportant)
+                    TaskCard(task, today, onToggleDone, onToggleImportant)
                 }
                 if (doneTasks.isNotEmpty()) {
                     item(key = "completed-header") {
@@ -134,7 +142,7 @@ fun ListDetailScreen(
                     }
                     if (showCompleted) {
                         items(doneTasks, key = { it.id }) { task ->
-                            TaskCard(task, onToggleDone, onToggleImportant)
+                            TaskCard(task, today, onToggleDone, onToggleImportant)
                         }
                     }
                 }
@@ -170,9 +178,11 @@ fun ListDetailScreen(
 @Composable
 private fun TaskCard(
     task: Task,
+    today: LocalDate,
     onToggleDone: (Long) -> Unit,
     onToggleImportant: (Long) -> Unit,
 ) {
+    val completed = task.isCompleted(today)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -181,24 +191,45 @@ private fun TaskCard(
             .padding(start = 8.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = { onToggleDone(task.id) }) {
-            CheckCircle(checked = task.done)
+        if (task.daily) {
+            // Günlük ödeme kendiliğinden azalır, elle işaretlenmez
+            Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_daily),
+                    contentDescription = "Günlük ödeme",
+                    tint = TextSecondary,
+                )
+            }
+        } else {
+            IconButton(onClick = { onToggleDone(task.id) }) {
+                CheckCircle(checked = task.done)
+            }
         }
         Spacer(Modifier.width(4.dp))
-        Text(
-            text = task.title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (task.done) TextSecondary else TextPrimary,
-            textDecoration = if (task.done) TextDecoration.LineThrough else null,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = task.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (completed) TextSecondary else TextPrimary,
+                textDecoration = if (completed) TextDecoration.LineThrough else null,
+            )
+            if (task.daily && task.amount != null) {
+                val daysLeft = today.lengthOfMonth() - today.dayOfMonth
+                Text(
+                    text = "Günlük ${Money.format(task.dailyShare(today))} · " +
+                        "${Money.format(task.amount)} · $daysLeft gün kaldı",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                )
+            }
+        }
         task.amount?.let { amount ->
             Text(
-                text = Money.format(amount),
+                text = Money.format(if (task.daily) task.remainingAmount(today) else amount),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = if (task.done) TextSecondary else TextPrimary,
-                textDecoration = if (task.done) TextDecoration.LineThrough else null,
+                color = if (completed) TextSecondary else TextPrimary,
+                textDecoration = if (completed) TextDecoration.LineThrough else null,
                 modifier = Modifier.padding(start = 8.dp),
             )
         }
@@ -295,11 +326,12 @@ private fun PaymentSummary(remaining: Long, paid: Long) {
 @Composable
 private fun AddTaskBar(
     withAmount: Boolean,
-    onAdd: (title: String, amount: Long?) -> Unit,
+    onAdd: (title: String, amount: Long?, daily: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var title by rememberSaveable { mutableStateOf("") }
     var amountText by rememberSaveable { mutableStateOf("") }
+    var daily by rememberSaveable { mutableStateOf(false) }
     val titleFocus = remember { FocusRequester() }
     val amountFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { titleFocus.requestFocus() }
@@ -310,65 +342,87 @@ private fun AddTaskBar(
     // To Do gibi: ekledikten sonra alan açık kalır, art arda görev yazılabilir
     val submit = {
         if (canAdd) {
-            onAdd(title, if (withAmount) amount else null)
+            onAdd(title, if (withAmount) amount else null, withAmount && daily)
             title = ""
             amountText = ""
+            daily = false
             titleFocus.requestFocus()
         }
     }
 
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .background(CardSurface)
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .size(24.dp)
-                .border(2.dp, TextSecondary, CircleShape),
-        )
-        Spacer(Modifier.width(16.dp))
-        BarTextField(
-            value = title,
-            onValueChange = { title = it },
-            placeholder = "Görev ekle",
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Sentences,
-                imeAction = if (withAmount) ImeAction.Next else ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { amountFocus.requestFocus() },
-                onDone = { submit() },
-            ),
-            modifier = Modifier
-                .weight(1f)
-                .focusRequester(titleFocus),
-        )
-        if (withAmount) {
-            Spacer(Modifier.width(12.dp))
-            BarTextField(
-                value = amountText,
-                onValueChange = { amountText = it },
-                placeholder = "Tutar (TL)",
-                isError = amountText.isNotEmpty() && amount == null,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(onDone = { submit() }),
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
                 modifier = Modifier
-                    .width(110.dp)
-                    .focusRequester(amountFocus),
+                    .size(24.dp)
+                    .border(2.dp, TextSecondary, CircleShape),
             )
+            Spacer(Modifier.width(16.dp))
+            BarTextField(
+                value = title,
+                onValueChange = { title = it },
+                placeholder = "Görev ekle",
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = if (withAmount) ImeAction.Next else ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { amountFocus.requestFocus() },
+                    onDone = { submit() },
+                ),
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(titleFocus),
+            )
+            if (withAmount) {
+                Spacer(Modifier.width(12.dp))
+                BarTextField(
+                    value = amountText,
+                    onValueChange = { amountText = it },
+                    placeholder = "Tutar (TL)",
+                    isError = amountText.isNotEmpty() && amount == null,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
+                    modifier = Modifier
+                        .width(110.dp)
+                        .focusRequester(amountFocus),
+                )
+            }
+            IconButton(onClick = submit, enabled = canAdd) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_send),
+                    contentDescription = "Ekle",
+                    tint = if (canAdd) TextPrimary else TextSecondary.copy(alpha = 0.4f),
+                )
+            }
         }
-        IconButton(onClick = submit, enabled = canAdd) {
-            Icon(
-                painter = painterResource(R.drawable.ic_send),
-                contentDescription = "Ekle",
-                tint = if (canAdd) TextPrimary else TextSecondary.copy(alpha = 0.4f),
-            )
+        if (withAmount) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable { daily = !daily }
+                    .padding(end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = daily,
+                    onCheckedChange = { daily = it },
+                    colors = CheckboxDefaults.colors(uncheckedColor = TextSecondary),
+                )
+                Text(
+                    text = if (daily) "Günlük · ay boyunca her gün kendiliğinden düşer" else "Günlük",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                )
+            }
         }
     }
 }
@@ -412,11 +466,11 @@ private fun ListDetailPreview() {
             type = ListType.PAYMENT,
             tasks = listOf(
                 Task(1, 1, "Ekstralar", 3, amount = 1_250_050),
-                Task(2, 1, "EV", 2, important = true, amount = 6_000_000),
+                Task(2, 1, "EV", 2, important = true, amount = 6_000_000, daily = true),
                 Task(3, 1, "Kredi Kartları", 1, done = true, amount = 2_000_000),
             ),
             onBack = {},
-            onAddTask = { _, _ -> },
+            onAddTask = { _, _, _ -> },
             onToggleDone = {},
             onToggleImportant = {},
         )

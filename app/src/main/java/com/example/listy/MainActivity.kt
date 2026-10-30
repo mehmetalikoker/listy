@@ -13,6 +13,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.listy.data.isCompleted
+import com.example.listy.data.remainingAmount
 import com.example.listy.ui.lists.ListDetailScreen
 import com.example.listy.ui.lists.ListSummary
 import com.example.listy.ui.lists.ListsScreen
@@ -52,10 +54,10 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
                     name = list.name,
                     colorIndex = list.colorIndex,
                     type = list.type,
-                    openTaskCount = tasks.count { it.listId == list.id && !it.done },
+                    openTaskCount = tasks.count { it.listId == list.id && !it.isCompleted() },
                     remainingAmount = tasks
-                        .filter { it.listId == list.id && !it.done }
-                        .sumOf { it.amount ?: 0 },
+                        .filter { it.listId == list.id }
+                        .sumOf { it.remainingAmount() },
                 )
             },
             onOpenList = { openListId = it },
@@ -70,7 +72,7 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
             type = openList.type,
             tasks = tasks.filter { it.listId == openList.id },
             onBack = { openListId = null },
-            onAddTask = { title, amount -> viewModel.addTask(openList.id, title, amount) },
+            onAddTask = { title, amount, daily -> viewModel.addTask(openList.id, title, amount, daily) },
             onToggleDone = viewModel::toggleDone,
             onToggleImportant = viewModel::toggleImportant,
         )

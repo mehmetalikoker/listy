@@ -31,9 +31,9 @@ class ListRepository(context: Context) {
         return list.id
     }
 
-    fun addTask(listId: Long, title: String, amount: Long?) {
+    fun addTask(listId: Long, title: String, amount: Long?, daily: Boolean) {
         val now = System.currentTimeMillis()
-        _tasks.value += Task(id = now, listId = listId, title = title, createdAt = now, amount = amount)
+        _tasks.value += Task(id = now, listId = listId, title = title, createdAt = now, amount = amount, daily = daily)
         saveTasks()
     }
 
@@ -65,6 +65,7 @@ class ListRepository(context: Context) {
             done = obj.optBoolean("done"),
             important = obj.optBoolean("important"),
             amount = if (obj.has("amount")) obj.getLong("amount") else null,
+            daily = obj.optBoolean("daily"),
         )
     }
 
@@ -85,6 +86,7 @@ class ListRepository(context: Context) {
             .put("createdAt", it.createdAt)
             .put("done", it.done)
             .put("important", it.important)
+            .put("daily", it.daily)
             .apply { it.amount?.let { amount -> put("amount", amount) } }
     }
 

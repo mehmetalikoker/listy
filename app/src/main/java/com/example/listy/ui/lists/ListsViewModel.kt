@@ -22,9 +22,9 @@ class ListsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** [amount] kuruş cinsinden; sadece ödeme listelerinde verilir. */
-    fun addTask(listId: Long, title: String, amount: Long?) {
+    fun addTask(listId: Long, title: String, amount: Long?, daily: Boolean) {
         val trimmed = title.trim()
-        if (trimmed.isNotEmpty()) repository.addTask(listId, trimmed, amount)
+        if (trimmed.isNotEmpty()) repository.addTask(listId, trimmed, amount, daily)
     }
 
     fun toggleDone(taskId: Long) = repository.toggleDone(taskId)
