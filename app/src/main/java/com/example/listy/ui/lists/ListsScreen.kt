@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,11 +17,13 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -47,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.example.listy.R
 import com.example.listy.data.ListType
 import com.example.listy.data.Money
+import com.example.listy.ui.theme.Accent
 import com.example.listy.ui.theme.DeleteRed
 import com.example.listy.ui.theme.EditYellow
 import com.example.listy.ui.theme.ListyTheme
@@ -97,7 +102,11 @@ fun ListsScreen(
             if (lists.isEmpty()) {
                 EmptyState()
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                // Alt boşluk: son satırın ikonları artı butonunun altında kalmasın
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 112.dp),
+                ) {
                     items(lists, key = { it.id }) { list ->
                         ListRow(
                             list = list,
@@ -108,9 +117,24 @@ fun ListsScreen(
                     }
                 }
             }
-        }
 
-        NewListRow(onClick = { showDialog = true })
+            FloatingActionButton(
+                onClick = { showDialog = true },
+                containerColor = Accent,
+                contentColor = Color.White,
+                shape = CircleShape,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(20.dp)
+                    .size(72.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_add),
+                    contentDescription = "Yeni liste",
+                    modifier = Modifier.size(36.dp),
+                )
+            }
+        }
     }
 
     if (showDialog) {
@@ -254,37 +278,13 @@ private fun RenameListDialog(
 }
 
 @Composable
-private fun NewListRow(onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_add),
-            contentDescription = null,
-            tint = TextSecondary,
-            modifier = Modifier.size(28.dp),
-        )
-        Spacer(Modifier.width(20.dp))
-        Text(
-            text = "Yeni liste",
-            style = MaterialTheme.typography.bodyLarge,
-            color = TextSecondary,
-        )
-    }
-}
-
-@Composable
 private fun EmptyState() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Henüz liste yok", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.padding(4.dp))
             Text(
-                "Aşağıdaki \"Yeni liste\" ile bir liste oluştur",
+                "Sağ alttaki + ile bir liste oluştur",
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
             )
