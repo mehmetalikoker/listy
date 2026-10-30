@@ -1,0 +1,103 @@
+package com.example.listy.data
+
+import android.content.Context
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONArray
+import org.json.JSONObject
+
+/**
+ * Listeleri ve görevleri SharedPreferences içinde JSON olarak saklar.
+ * İleride Room'a geçmek istenirse sadece bu sınıf değişir.
+ */
+class ListRepository(context: Context) {
+
+    private val prefs = context.applicationContext
+        .getSharedPreferences("listy_data", Context.MODE_PRIVATE)
+
+    private val _lists = MutableStateFlow(loadLists())
+    val lists: StateFlow<List<TaskList>> = _lists.asStateFlow()
+
+    private val _tasks = MutableStateFlow(loadTasks())
+    val tasks: StateFlow<List<Task>> = _tasks.asStateFlow()
+
+    /** Yeni listeyi oluşturur ve id'sini döner. */
+    fun addList(name: String): Long {
+        val now = System.currentTimeMillis()
+        val list = TaskList(id = now, name = name, createdAt = now, colorIndex = _lists.value.size)
+        _lists.value += list
+        saveLists()
+        return list.id
+    }
+
+    fun addTask(listId: Long, title: String) {
+        val now = System.currentTimeMillis()
+        _tasks.value += Task(id = now, listId = listId, title = title, createdAt = now)
+        saveTasks()
+    }
+
+    fun toggleDone(taskId: Long) = updateTask(taskId) { it.copy(done = !it.done) }
+
+    fun toggleImportant(taskId: Long) = updateTask(taskId) { it.copy(important = !it.important) }
+
+    private fun updateTask(taskId: Long, change: (Task) -> Task) {
+        _tasks.value = _tasks.value.map { if (it.id == taskId) change(it) else it }
+        saveTasks()
+    }
+
+    private fun loadLists(): List<TaskList> = readArray(KEY_LISTS) { obj ->
+        TaskList(
+            id = obj.getLong("id"),
+            name = obj.getString("name"),
+            createdAt = obj.getLong("createdAt"),
+            colorIndex = obj.optInt("colorIndex", 0),
+        )
+    }
+
+    private fun loadTasks(): List<Task> = readArray(KEY_TASKS) { obj ->
+        Task(
+            id = obj.getLong("id"),
+            listId = obj.getLong("listId"),
+            title = obj.getString("title"),
+            createdAt = obj.getLong("createdAt"),
+            done = obj.optBoolean("done"),
+            important = obj.optBoolean("important"),
+        )
+    }
+
+    private fun saveLists() = writeArray(KEY_LISTS, _lists.value) {
+        JSONObject()
+            .put("id", it.id)
+            .put("name", it.name)
+            .put("createdAt", it.createdAt)
+            .put("colorIndex", it.colorIndex)
+    }
+
+    private fun saveTasks() = writeArray(KEY_TASKS, _tasks.value) {
+        JSONObject()
+            .put("id", it.id)
+            .put("listId", it.listId)
+            .put("title", it.title)
+            .put("createdAt", it.createdAt)
+            .put("done", it.done)
+            .put("important", it.important)
+    }
+
+    private fun <T> readArray(key: String, parse: (JSONObject) -> T): List<T> {
+        val raw = prefs.getString(key, null) ?: return emptyList()
+        val array = JSONArray(raw)
+        return List(array.length()) { i -> parse(array.getJSONObject(i)) }
+    }
+
+    private fun <T> writeArray(key: String, items: List<T>, toJson: (T) -> JSONObject) {
+        val array = JSONArray()
+        items.forEach { array.put(toJson(it)) }
+        prefs.edit().putString(key, array.toString()).apply()
+    }
+
+    private companion object {
+        const val KEY_LISTS = "lists"
+        const val KEY_TASKS = "tasks"
+    }
+}
