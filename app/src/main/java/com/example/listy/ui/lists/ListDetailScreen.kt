@@ -213,17 +213,23 @@ fun ListDetailScreen(
                     .imePadding(),
             )
         } else {
+            // Beyaz zemin + liste rengi: her temada arka plandan ayrışır
             FloatingActionButton(
                 onClick = { adding = true },
-                containerColor = color,
-                contentColor = Color.White,
+                containerColor = Color.White,
+                contentColor = color,
                 shape = CircleShape,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .navigationBarsPadding()
-                    .padding(20.dp),
+                    .padding(20.dp)
+                    .size(72.dp),
             ) {
-                Icon(painterResource(R.drawable.ic_add), contentDescription = "Görev ekle")
+                Icon(
+                    painter = painterResource(R.drawable.ic_add),
+                    contentDescription = "Görev ekle",
+                    modifier = Modifier.size(36.dp),
+                )
             }
         }
     }
