@@ -120,13 +120,32 @@ fun ListDetailScreen(
                     tint = Color.White,
                 )
             }
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 34.sp,
-                fontWeight = FontWeight.SemiBold,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            )
+            ) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (isPayment) {
+                    // Ay sonuna kalan gün; ayın son günündeysek sonraki ayın sonuna
+                    Text(
+                        text = "${DailyPeriod.of(today).daysLeft} gün",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .padding(start = 12.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(alpha = 0.25f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                }
+            }
             if (isPayment) {
                 PaymentSummary(
                     remaining = tasks.sumOf { it.remainingAmount(today) },
