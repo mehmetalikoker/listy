@@ -51,21 +51,26 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
                     id = list.id,
                     name = list.name,
                     colorIndex = list.colorIndex,
+                    type = list.type,
                     openTaskCount = tasks.count { it.listId == list.id && !it.done },
+                    remainingAmount = tasks
+                        .filter { it.listId == list.id && !it.done }
+                        .sumOf { it.amount ?: 0 },
                 )
             },
             onOpenList = { openListId = it },
             // To Do gibi: yeni liste oluşunca direkt içine gir
-            onCreateList = { name -> viewModel.createList(name)?.let { openListId = it } },
+            onCreateList = { name, type -> viewModel.createList(name, type)?.let { openListId = it } },
         )
     } else {
         BackHandler { openListId = null }
         ListDetailScreen(
             title = openList.name,
             color = listColor(openList.colorIndex),
+            type = openList.type,
             tasks = tasks.filter { it.listId == openList.id },
             onBack = { openListId = null },
-            onAddTask = { viewModel.addTask(openList.id, it) },
+            onAddTask = { title, amount -> viewModel.addTask(openList.id, title, amount) },
             onToggleDone = viewModel::toggleDone,
             onToggleImportant = viewModel::toggleImportant,
         )

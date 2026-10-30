@@ -50,11 +50,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.listy.R
+import com.example.listy.data.ListType
+import com.example.listy.data.Money
 import com.example.listy.data.Task
 import com.example.listy.ui.theme.CardSurface
 import com.example.listy.ui.theme.ListyTheme
@@ -65,9 +68,10 @@ import com.example.listy.ui.theme.TextSecondary
 fun ListDetailScreen(
     title: String,
     color: Color,
+    type: ListType,
     tasks: List<Task>,
     onBack: () -> Unit,
-    onAddTask: (String) -> Unit,
+    onAddTask: (title: String, amount: Long?) -> Unit,
     onToggleDone: (Long) -> Unit,
     onToggleImportant: (Long) -> Unit,
 ) {
@@ -79,6 +83,7 @@ fun ListDetailScreen(
     // Yeni eklenen en üstte
     val openTasks = tasks.filter { !it.done }.sortedByDescending { it.createdAt }
     val doneTasks = tasks.filter { it.done }.sortedByDescending { it.createdAt }
+    val isPayment = type == ListType.PAYMENT
 
     Box(
         modifier = Modifier
@@ -104,6 +109,12 @@ fun ListDetailScreen(
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
             )
+            if (isPayment) {
+                PaymentSummary(
+                    remaining = openTasks.sumOf { it.amount ?: 0 },
+                    paid = doneTasks.sumOf { it.amount ?: 0 },
+                )
+            }
 
             LazyColumn(
                 modifier = Modifier.weight(1f),
@@ -132,6 +143,7 @@ fun ListDetailScreen(
 
         if (adding) {
             AddTaskBar(
+                withAmount = isPayment,
                 onAdd = onAddTask,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -180,6 +192,16 @@ private fun TaskCard(
             textDecoration = if (task.done) TextDecoration.LineThrough else null,
             modifier = Modifier.weight(1f),
         )
+        task.amount?.let { amount ->
+            Text(
+                text = Money.format(amount),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = if (task.done) TextSecondary else TextPrimary,
+                textDecoration = if (task.done) TextDecoration.LineThrough else null,
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
         IconButton(onClick = { onToggleImportant(task.id) }) {
             Icon(
                 painter = painterResource(if (task.important) R.drawable.ic_star else R.drawable.ic_star_outline),
@@ -239,16 +261,59 @@ private fun CompletedHeader(count: Int, expanded: Boolean, onClick: () -> Unit) 
 }
 
 @Composable
-private fun AddTaskBar(onAdd: (String) -> Unit, modifier: Modifier = Modifier) {
-    var text by rememberSaveable { mutableStateOf("") }
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+private fun PaymentSummary(remaining: Long, paid: Long) {
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color.Black.copy(alpha = 0.25f))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Kalan", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelLarge)
+            Text(
+                text = Money.format(remaining),
+                color = Color.White,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text("Ödenen", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelLarge)
+            Text(Money.format(paid), color = Color.White, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = "Toplam ${Money.format(remaining + paid)}",
+                color = Color.White.copy(alpha = 0.8f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddTaskBar(
+    withAmount: Boolean,
+    onAdd: (title: String, amount: Long?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var title by rememberSaveable { mutableStateOf("") }
+    var amountText by rememberSaveable { mutableStateOf("") }
+    val titleFocus = remember { FocusRequester() }
+    val amountFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { titleFocus.requestFocus() }
+
+    val amount = Money.parse(amountText)
+    val canAdd = title.isNotBlank() && (!withAmount || amount != null)
 
     // To Do gibi: ekledikten sonra alan açık kalır, art arda görev yazılabilir
     val submit = {
-        if (text.isNotBlank()) {
-            onAdd(text)
-            text = ""
+        if (canAdd) {
+            onAdd(title, if (withAmount) amount else null)
+            title = ""
+            amountText = ""
+            titleFocus.requestFocus()
         }
     }
 
@@ -265,33 +330,75 @@ private fun AddTaskBar(onAdd: (String) -> Unit, modifier: Modifier = Modifier) {
                 .border(2.dp, TextSecondary, CircleShape),
         )
         Spacer(Modifier.width(16.dp))
-        Box(modifier = Modifier.weight(1f)) {
-            if (text.isEmpty()) {
-                Text("Görev ekle", color = TextSecondary, style = MaterialTheme.typography.bodyLarge)
-            }
-            BasicTextField(
-                value = text,
-                onValueChange = { text = it },
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = TextPrimary),
-                cursorBrush = SolidColor(TextPrimary),
+        BarTextField(
+            value = title,
+            onValueChange = { title = it },
+            placeholder = "Görev ekle",
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Sentences,
+                imeAction = if (withAmount) ImeAction.Next else ImeAction.Done,
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { amountFocus.requestFocus() },
+                onDone = { submit() },
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .focusRequester(titleFocus),
+        )
+        if (withAmount) {
+            Spacer(Modifier.width(12.dp))
+            BarTextField(
+                value = amountText,
+                onValueChange = { amountText = it },
+                placeholder = "Tutar (TL)",
+                isError = amountText.isNotEmpty() && amount == null,
                 keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
+                    keyboardType = KeyboardType.Decimal,
                     imeAction = ImeAction.Done,
                 ),
                 keyboardActions = KeyboardActions(onDone = { submit() }),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester),
+                    .width(110.dp)
+                    .focusRequester(amountFocus),
             )
         }
-        IconButton(onClick = submit, enabled = text.isNotBlank()) {
+        IconButton(onClick = submit, enabled = canAdd) {
             Icon(
                 painter = painterResource(R.drawable.ic_send),
                 contentDescription = "Ekle",
-                tint = if (text.isNotBlank()) TextPrimary else TextSecondary.copy(alpha = 0.4f),
+                tint = if (canAdd) TextPrimary else TextSecondary.copy(alpha = 0.4f),
             )
         }
+    }
+}
+
+@Composable
+private fun BarTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    keyboardOptions: KeyboardOptions,
+    keyboardActions: KeyboardActions,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false,
+) {
+    Box(modifier = modifier) {
+        if (value.isEmpty()) {
+            Text(placeholder, color = TextSecondary, style = MaterialTheme.typography.bodyLarge)
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = if (isError) Color(0xFFFF8A80) else TextPrimary,
+            ),
+            cursorBrush = SolidColor(TextPrimary),
+            keyboardOptions = keyboardOptions,
+            keyboardActions = keyboardActions,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -302,13 +409,14 @@ private fun ListDetailPreview() {
         ListDetailScreen(
             title = "Ödemeler",
             color = Color(0xFFC9506B),
+            type = ListType.PAYMENT,
             tasks = listOf(
-                Task(1, 1, "Ekstralar", 3),
-                Task(2, 1, "EV (60.000 TL)", 2, important = true),
-                Task(3, 1, "Kredi Kartları", 1, done = true),
+                Task(1, 1, "Ekstralar", 3, amount = 1_250_050),
+                Task(2, 1, "EV", 2, important = true, amount = 6_000_000),
+                Task(3, 1, "Kredi Kartları", 1, done = true, amount = 2_000_000),
             ),
             onBack = {},
-            onAddTask = {},
+            onAddTask = { _, _ -> },
             onToggleDone = {},
             onToggleImportant = {},
         )

@@ -23,17 +23,17 @@ class ListRepository(context: Context) {
     val tasks: StateFlow<List<Task>> = _tasks.asStateFlow()
 
     /** Yeni listeyi oluşturur ve id'sini döner. */
-    fun addList(name: String): Long {
+    fun addList(name: String, type: ListType): Long {
         val now = System.currentTimeMillis()
-        val list = TaskList(id = now, name = name, createdAt = now, colorIndex = _lists.value.size)
+        val list = TaskList(id = now, name = name, createdAt = now, colorIndex = _lists.value.size, type = type)
         _lists.value += list
         saveLists()
         return list.id
     }
 
-    fun addTask(listId: Long, title: String) {
+    fun addTask(listId: Long, title: String, amount: Long?) {
         val now = System.currentTimeMillis()
-        _tasks.value += Task(id = now, listId = listId, title = title, createdAt = now)
+        _tasks.value += Task(id = now, listId = listId, title = title, createdAt = now, amount = amount)
         saveTasks()
     }
 
@@ -52,6 +52,7 @@ class ListRepository(context: Context) {
             name = obj.getString("name"),
             createdAt = obj.getLong("createdAt"),
             colorIndex = obj.optInt("colorIndex", 0),
+            type = ListType.valueOf(obj.optString("type", ListType.TODO.name)),
         )
     }
 
@@ -63,6 +64,7 @@ class ListRepository(context: Context) {
             createdAt = obj.getLong("createdAt"),
             done = obj.optBoolean("done"),
             important = obj.optBoolean("important"),
+            amount = if (obj.has("amount")) obj.getLong("amount") else null,
         )
     }
 
@@ -72,6 +74,7 @@ class ListRepository(context: Context) {
             .put("name", it.name)
             .put("createdAt", it.createdAt)
             .put("colorIndex", it.colorIndex)
+            .put("type", it.type.name)
     }
 
     private fun saveTasks() = writeArray(KEY_TASKS, _tasks.value) {
@@ -82,6 +85,7 @@ class ListRepository(context: Context) {
             .put("createdAt", it.createdAt)
             .put("done", it.done)
             .put("important", it.important)
+            .apply { it.amount?.let { amount -> put("amount", amount) } }
     }
 
     private fun <T> readArray(key: String, parse: (JSONObject) -> T): List<T> {
