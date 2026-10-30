@@ -29,5 +29,10 @@ class ListsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleDone(taskId: Long) = repository.toggleDone(taskId)
 
-    fun toggleImportant(taskId: Long) = repository.toggleImportant(taskId)
+    fun editTask(taskId: Long, title: String, amount: Long?, daily: Boolean) {
+        val trimmed = title.trim()
+        if (trimmed.isNotEmpty()) repository.editTask(taskId, trimmed, amount, daily)
+    }
+
+    fun deleteTask(taskId: Long) = repository.deleteTask(taskId)
 }

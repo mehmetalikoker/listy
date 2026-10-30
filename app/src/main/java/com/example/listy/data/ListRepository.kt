@@ -39,7 +39,13 @@ class ListRepository(context: Context) {
 
     fun toggleDone(taskId: Long) = updateTask(taskId) { it.copy(done = !it.done) }
 
-    fun toggleImportant(taskId: Long) = updateTask(taskId) { it.copy(important = !it.important) }
+    fun editTask(taskId: Long, title: String, amount: Long?, daily: Boolean) =
+        updateTask(taskId) { it.copy(title = title, amount = amount, daily = daily) }
+
+    fun deleteTask(taskId: Long) {
+        _tasks.value = _tasks.value.filterNot { it.id == taskId }
+        saveTasks()
+    }
 
     private fun updateTask(taskId: Long, change: (Task) -> Task) {
         _tasks.value = _tasks.value.map { if (it.id == taskId) change(it) else it }

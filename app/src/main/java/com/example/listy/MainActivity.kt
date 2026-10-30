@@ -74,7 +74,8 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
             onBack = { openListId = null },
             onAddTask = { title, amount, daily -> viewModel.addTask(openList.id, title, amount, daily) },
             onToggleDone = viewModel::toggleDone,
-            onToggleImportant = viewModel::toggleImportant,
+            onEditTask = viewModel::editTask,
+            onDeleteTask = viewModel::deleteTask,
         )
     }
 }

@@ -25,13 +25,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -81,10 +85,13 @@ fun ListDetailScreen(
     onBack: () -> Unit,
     onAddTask: (title: String, amount: Long?, daily: Boolean) -> Unit,
     onToggleDone: (Long) -> Unit,
-    onToggleImportant: (Long) -> Unit,
+    onEditTask: (id: Long, title: String, amount: Long?, daily: Boolean) -> Unit,
+    onDeleteTask: (Long) -> Unit,
 ) {
     var adding by rememberSaveable { mutableStateOf(false) }
     var showCompleted by rememberSaveable { mutableStateOf(true) }
+    var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     BackHandler(enabled = adding) { adding = false }
 
@@ -131,7 +138,13 @@ fun ListDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 items(openTasks, key = { it.id }) { task ->
-                    TaskCard(task, today, onToggleDone, onToggleImportant)
+                    TaskCard(
+                        task = task,
+                        today = today,
+                        onToggleDone = onToggleDone,
+                        onEdit = { editingId = task.id },
+                        onDelete = { deletingId = task.id },
+                    )
                 }
                 if (doneTasks.isNotEmpty()) {
                     item(key = "completed-header") {
@@ -143,7 +156,13 @@ fun ListDetailScreen(
                     }
                     if (showCompleted) {
                         items(doneTasks, key = { it.id }) { task ->
-                            TaskCard(task, today, onToggleDone, onToggleImportant)
+                            TaskCard(
+                                task = task,
+                                today = today,
+                                onToggleDone = onToggleDone,
+                                onEdit = { editingId = task.id },
+                                onDelete = { deletingId = task.id },
+                            )
                         }
                     }
                 }
@@ -174,14 +193,50 @@ fun ListDetailScreen(
             }
         }
     }
+
+    tasks.find { it.id == editingId }?.let { task ->
+        EditTaskDialog(
+            task = task,
+            withAmount = isPayment,
+            onDismiss = { editingId = null },
+            onSave = { newTitle, amount, daily ->
+                onEditTask(task.id, newTitle, amount, daily)
+                editingId = null
+            },
+        )
+    }
+
+    tasks.find { it.id == deletingId }?.let { task ->
+        AlertDialog(
+            onDismissRequest = { deletingId = null },
+            title = { Text("Görev silinsin mi?") },
+            text = { Text("\"${task.title}\" kalıcı olarak silinecek.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteTask(task.id)
+                        deletingId = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = DeleteRed),
+                ) { Text("Sil") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingId = null }) { Text("İptal") }
+            },
+        )
+    }
 }
+
+private val EditYellow = Color(0xFFF2C94C)
+private val DeleteRed = Color(0xFFE5534B)
 
 @Composable
 private fun TaskCard(
     task: Task,
     today: LocalDate,
     onToggleDone: (Long) -> Unit,
-    onToggleImportant: (Long) -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val completed = task.isCompleted(today)
     Row(
@@ -234,14 +289,88 @@ private fun TaskCard(
                 modifier = Modifier.padding(start = 8.dp),
             )
         }
-        IconButton(onClick = { onToggleImportant(task.id) }) {
+        Spacer(Modifier.width(4.dp))
+        IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
             Icon(
-                painter = painterResource(if (task.important) R.drawable.ic_star else R.drawable.ic_star_outline),
-                contentDescription = if (task.important) "Önemli işaretini kaldır" else "Önemli olarak işaretle",
-                tint = if (task.important) Color(0xFF7B8CDE) else TextSecondary,
+                painter = painterResource(R.drawable.ic_edit),
+                contentDescription = "Düzenle",
+                tint = EditYellow,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+            Icon(
+                painter = painterResource(R.drawable.ic_delete),
+                contentDescription = "Sil",
+                tint = DeleteRed,
+                modifier = Modifier.size(20.dp),
             )
         }
     }
+}
+
+@Composable
+private fun EditTaskDialog(
+    task: Task,
+    withAmount: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (title: String, amount: Long?, daily: Boolean) -> Unit,
+) {
+    var title by rememberSaveable { mutableStateOf(task.title) }
+    var amountText by rememberSaveable {
+        mutableStateOf(task.amount?.let { Money.format(it).removeSuffix(" TL") } ?: "")
+    }
+    var daily by rememberSaveable { mutableStateOf(task.daily) }
+
+    val amount = Money.parse(amountText)
+    val canSave = title.isNotBlank() && (!withAmount || amount != null)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Görevi düzenle") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Görev") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (withAmount) {
+                    OutlinedTextField(
+                        value = amountText,
+                        onValueChange = { amountText = it },
+                        label = { Text("Tutar (TL)") },
+                        singleLine = true,
+                        isError = amountText.isNotEmpty() && amount == null,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { daily = !daily }
+                            .padding(end = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(checked = daily, onCheckedChange = { daily = it })
+                        Text("Günlük", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(title, if (withAmount) amount else null, withAmount && daily) },
+                enabled = canSave,
+            ) { Text("Kaydet") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("İptal") }
+        },
+    )
 }
 
 @Composable
@@ -473,7 +602,8 @@ private fun ListDetailPreview() {
             onBack = {},
             onAddTask = { _, _, _ -> },
             onToggleDone = {},
-            onToggleImportant = {},
+            onEditTask = { _, _, _, _ -> },
+            onDeleteTask = {},
         )
     }
 }
