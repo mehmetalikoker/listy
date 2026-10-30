@@ -1,5 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Listy" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Listy" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Açılış görseli gelene kadar düz renk; renk görselin ortalama tonu -->
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
 </resources>
