@@ -48,10 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -74,17 +72,20 @@ import java.time.LocalDate
 import com.example.listy.ui.theme.CardSurface
 import com.example.listy.ui.theme.DeleteRed
 import com.example.listy.ui.theme.EditYellow
+import com.example.listy.ui.theme.ListThemes
 import com.example.listy.ui.theme.ListyTheme
 import com.example.listy.ui.theme.TextPrimary
 import com.example.listy.ui.theme.TextSecondary
+import com.example.listy.ui.theme.listColor
 
 @Composable
 fun ListDetailScreen(
     title: String,
-    color: Color,
+    colorIndex: Int,
     type: ListType,
     tasks: List<Task>,
     onBack: () -> Unit,
+    onChangeColor: (Int) -> Unit,
     onAddTask: (title: String, amount: Long?, daily: Boolean) -> Unit,
     onToggleDone: (Long) -> Unit,
     onEditTask: (id: Long, title: String, amount: Long?, daily: Boolean) -> Unit,
@@ -94,6 +95,8 @@ fun ListDetailScreen(
     var showCompleted by rememberSaveable { mutableStateOf(true) }
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var pickingTheme by rememberSaveable { mutableStateOf(false) }
+    val color = listColor(colorIndex)
 
     BackHandler(enabled = adding) { adding = false }
 
@@ -106,19 +109,29 @@ fun ListDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(color, lerp(color, Color.White, 0.3f)))),
+            .background(color),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding(),
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_arrow_back),
-                    contentDescription = "Geri",
-                    tint = Color.White,
-                )
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp)) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_back),
+                        contentDescription = "Geri",
+                        tint = Color.White,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { pickingTheme = true }) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_palette),
+                        contentDescription = "Tema",
+                        tint = Color.White,
+                    )
+                }
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -213,6 +226,14 @@ fun ListDetailScreen(
                 Icon(painterResource(R.drawable.ic_add), contentDescription = "Görev ekle")
             }
         }
+    }
+
+    if (pickingTheme) {
+        ThemeDialog(
+            selectedIndex = colorIndex.mod(ListThemes.size),
+            onSelect = onChangeColor,
+            onDismiss = { pickingTheme = false },
+        )
     }
 
     tasks.find { it.id == editingId }?.let { task ->
@@ -388,6 +409,58 @@ private fun EditTaskDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("İptal") }
+        },
+    )
+}
+
+@Composable
+private fun ThemeDialog(
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tema") },
+        text = {
+            // Seçim anında uygulanır; arka plan değişimi dialog arkasında görünür
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                ListThemes.withIndex().chunked(4).forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        row.forEach { (index, theme) ->
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(theme.color)
+                                    .then(
+                                        if (index == selectedIndex) {
+                                            Modifier.border(3.dp, Color.White, CircleShape)
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
+                                    .clickable { onSelect(index) },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (index == selectedIndex) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_check),
+                                        contentDescription = theme.name,
+                                        tint = Color.White,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Tamam") }
         },
     )
 }
@@ -611,7 +684,7 @@ private fun ListDetailPreview() {
     ListyTheme {
         ListDetailScreen(
             title = "Ödemeler",
-            color = Color(0xFFC9506B),
+            colorIndex = 0,
             type = ListType.PAYMENT,
             tasks = listOf(
                 Task(1, 1, "Ekstralar", 3, amount = 1_250_050),
@@ -619,6 +692,7 @@ private fun ListDetailPreview() {
                 Task(3, 1, "Kredi Kartları", 1, done = true, amount = 2_000_000),
             ),
             onBack = {},
+            onChangeColor = {},
             onAddTask = { _, _, _ -> },
             onToggleDone = {},
             onEditTask = { _, _, _, _ -> },

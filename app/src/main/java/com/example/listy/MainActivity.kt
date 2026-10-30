@@ -20,7 +20,6 @@ import com.example.listy.ui.lists.ListSummary
 import com.example.listy.ui.lists.ListsScreen
 import com.example.listy.ui.lists.ListsViewModel
 import com.example.listy.ui.theme.ListyTheme
-import com.example.listy.ui.theme.listColor
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,10 +69,11 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
         BackHandler { openListId = null }
         ListDetailScreen(
             title = openList.name,
-            color = listColor(openList.colorIndex),
+            colorIndex = openList.colorIndex,
             type = openList.type,
             tasks = tasks.filter { it.listId == openList.id },
             onBack = { openListId = null },
+            onChangeColor = { viewModel.setListColor(openList.id, it) },
             onAddTask = { title, amount, daily -> viewModel.addTask(openList.id, title, amount, daily) },
             onToggleDone = viewModel::toggleDone,
             onEditTask = viewModel::editTask,

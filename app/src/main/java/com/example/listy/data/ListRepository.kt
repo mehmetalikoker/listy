@@ -36,6 +36,11 @@ class ListRepository(context: Context) {
         saveLists()
     }
 
+    fun setListColor(listId: Long, colorIndex: Int) {
+        _lists.value = _lists.value.map { if (it.id == listId) it.copy(colorIndex = colorIndex) else it }
+        saveLists()
+    }
+
     /** Listeyi içindeki görevlerle birlikte siler. */
     fun deleteList(listId: Long) {
         _lists.value = _lists.value.filterNot { it.id == listId }

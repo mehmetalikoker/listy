@@ -26,6 +26,8 @@ class ListsViewModel(application: Application) : AndroidViewModel(application) {
         if (trimmed.isNotEmpty()) repository.renameList(listId, trimmed)
     }
 
+    fun setListColor(listId: Long, colorIndex: Int) = repository.setListColor(listId, colorIndex)
+
     fun deleteList(listId: Long) = repository.deleteList(listId)
 
     /** [amount] kuruş cinsinden; sadece ödeme listelerinde verilir. */
