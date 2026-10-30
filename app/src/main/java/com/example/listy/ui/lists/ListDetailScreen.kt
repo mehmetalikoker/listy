@@ -72,6 +72,8 @@ import com.example.listy.data.paidAmount
 import com.example.listy.data.remainingAmount
 import java.time.LocalDate
 import com.example.listy.ui.theme.CardSurface
+import com.example.listy.ui.theme.DeleteRed
+import com.example.listy.ui.theme.EditYellow
 import com.example.listy.ui.theme.ListyTheme
 import com.example.listy.ui.theme.TextPrimary
 import com.example.listy.ui.theme.TextSecondary
@@ -227,8 +229,6 @@ fun ListDetailScreen(
     }
 }
 
-private val EditYellow = Color(0xFFF2C94C)
-private val DeleteRed = Color(0xFFE5534B)
 
 @Composable
 private fun TaskCard(

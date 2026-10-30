@@ -9,6 +9,8 @@ val TextPrimary = Color(0xFFE8E8E8)
 val TextSecondary = Color(0xFF9E9E9E)
 val Divider = Color(0xFF2A2A2A)
 val Accent = Color(0xFF7B8CDE)
+val EditYellow = Color(0xFFF2C94C)
+val DeleteRed = Color(0xFFE5534B)
 
 // Her yeni listeye sırayla verilen renkler
 val ListColors = listOf(

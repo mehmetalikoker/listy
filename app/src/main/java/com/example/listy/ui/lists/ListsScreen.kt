@@ -19,9 +19,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -45,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import com.example.listy.R
 import com.example.listy.data.ListType
 import com.example.listy.data.Money
+import com.example.listy.ui.theme.DeleteRed
+import com.example.listy.ui.theme.EditYellow
 import com.example.listy.ui.theme.ListyTheme
 import com.example.listy.ui.theme.TextSecondary
 import com.example.listy.ui.theme.listColor
@@ -65,8 +69,12 @@ fun ListsScreen(
     lists: List<ListSummary>,
     onOpenList: (Long) -> Unit,
     onCreateList: (String, ListType) -> Unit,
+    onRenameList: (id: Long, name: String) -> Unit,
+    onDeleteList: (Long) -> Unit,
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
+    var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     Column(
         modifier = Modifier
@@ -91,7 +99,12 @@ fun ListsScreen(
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(lists, key = { it.id }) { list ->
-                        ListRow(list = list, onClick = { onOpenList(list.id) })
+                        ListRow(
+                            list = list,
+                            onClick = { onOpenList(list.id) },
+                            onEdit = { editingId = list.id },
+                            onDelete = { deletingId = list.id },
+                        )
                     }
                 }
             }
@@ -109,15 +122,51 @@ fun ListsScreen(
             },
         )
     }
+
+    lists.find { it.id == editingId }?.let { list ->
+        RenameListDialog(
+            currentName = list.name,
+            onDismiss = { editingId = null },
+            onSave = { name ->
+                onRenameList(list.id, name)
+                editingId = null
+            },
+        )
+    }
+
+    lists.find { it.id == deletingId }?.let { list ->
+        AlertDialog(
+            onDismissRequest = { deletingId = null },
+            title = { Text("Liste silinsin mi?") },
+            text = { Text("\"${list.name}\" listesi içindeki tüm görevlerle birlikte kalıcı olarak silinecek.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteList(list.id)
+                        deletingId = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = DeleteRed),
+                ) { Text("Sil") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingId = null }) { Text("İptal") }
+            },
+        )
+    }
 }
 
 @Composable
-private fun ListRow(list: ListSummary, onClick: () -> Unit) {
+private fun ListRow(
+    list: ListSummary,
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 18.dp),
+            .padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -149,7 +198,59 @@ private fun ListRow(list: ListSummary, onClick: () -> Unit) {
                 color = TextSecondary,
             )
         }
+        Spacer(Modifier.width(8.dp))
+        IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+            Icon(
+                painter = painterResource(R.drawable.ic_edit),
+                contentDescription = "Listeyi düzenle",
+                tint = EditYellow,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+            Icon(
+                painter = painterResource(R.drawable.ic_delete),
+                contentDescription = "Listeyi sil",
+                tint = DeleteRed,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
+}
+
+@Composable
+private fun RenameListDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    var name by rememberSaveable { mutableStateOf(currentName) }
+    val canSave = name.isNotBlank()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Listeyi düzenle") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Liste adı") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = { if (canSave) onSave(name) }),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(name) }, enabled = canSave) { Text("Kaydet") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("İptal") }
+        },
+    )
 }
 
 @Composable
@@ -262,6 +363,8 @@ private fun ListsScreenPreview() {
             ),
             onOpenList = {},
             onCreateList = { _, _ -> },
+            onRenameList = { _, _ -> },
+            onDeleteList = {},
         )
     }
 }

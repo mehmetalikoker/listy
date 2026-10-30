@@ -31,6 +31,19 @@ class ListRepository(context: Context) {
         return list.id
     }
 
+    fun renameList(listId: Long, name: String) {
+        _lists.value = _lists.value.map { if (it.id == listId) it.copy(name = name) else it }
+        saveLists()
+    }
+
+    /** Listeyi içindeki görevlerle birlikte siler. */
+    fun deleteList(listId: Long) {
+        _lists.value = _lists.value.filterNot { it.id == listId }
+        _tasks.value = _tasks.value.filterNot { it.listId == listId }
+        saveLists()
+        saveTasks()
+    }
+
     fun addTask(listId: Long, title: String, amount: Long?, daily: Boolean) {
         val now = System.currentTimeMillis()
         _tasks.value += Task(id = now, listId = listId, title = title, createdAt = now, amount = amount, daily = daily)

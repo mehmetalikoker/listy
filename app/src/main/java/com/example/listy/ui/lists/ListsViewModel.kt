@@ -21,6 +21,13 @@ class ListsViewModel(application: Application) : AndroidViewModel(application) {
         return if (trimmed.isNotEmpty()) repository.addList(trimmed, type) else null
     }
 
+    fun renameList(listId: Long, name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isNotEmpty()) repository.renameList(listId, trimmed)
+    }
+
+    fun deleteList(listId: Long) = repository.deleteList(listId)
+
     /** [amount] kuruş cinsinden; sadece ödeme listelerinde verilir. */
     fun addTask(listId: Long, title: String, amount: Long?, daily: Boolean) {
         val trimmed = title.trim()

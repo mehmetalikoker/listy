@@ -61,6 +61,8 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
                 )
             },
             onOpenList = { openListId = it },
+            onRenameList = viewModel::renameList,
+            onDeleteList = viewModel::deleteList,
             // To Do gibi: yeni liste oluşunca direkt içine gir
             onCreateList = { name, type -> viewModel.createList(name, type)?.let { openListId = it } },
         )
