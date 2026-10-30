@@ -134,7 +134,7 @@ fun ListDetailScreen(
                 if (isPayment) {
                     // Ay sonuna kalan gün; ayın son günündeysek sonraki ayın sonuna
                     Text(
-                        text = "${DailyPeriod.of(today).daysLeft} gün",
+                        text = "Ay sonuna ${DailyPeriod.of(today).daysLeft} gün",
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
