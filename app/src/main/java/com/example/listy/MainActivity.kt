@@ -6,7 +6,14 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,10 +38,26 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             ListyTheme {
-                ListyApp()
+                // Soğuk açılışta 2 sn açılış görseli; ekran dönünce tekrar gösterilmez
+                var showSplash by rememberSaveable { mutableStateOf(true) }
+                LaunchedEffect(Unit) {
+                    delay(2000)
+                    showSplash = false
+                }
+                if (showSplash) SplashScreen() else ListyApp()
             }
         }
     }
+}
+
+@Composable
+private fun SplashScreen() {
+    Image(
+        painter = painterResource(R.drawable.splash),
+        contentDescription = "Listy",
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
 
 @Composable
