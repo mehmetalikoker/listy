@@ -58,6 +58,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.listy.R
+import com.example.listy.data.DailyPeriod
 import com.example.listy.data.ListType
 import com.example.listy.data.Money
 import com.example.listy.data.Task
@@ -214,7 +215,7 @@ private fun TaskCard(
                 textDecoration = if (completed) TextDecoration.LineThrough else null,
             )
             if (task.daily && task.amount != null) {
-                val daysLeft = today.lengthOfMonth() - today.dayOfMonth
+                val daysLeft = DailyPeriod.of(today).daysLeft
                 Text(
                     text = "Günlük ${Money.format(task.dailyShare(today))} · " +
                         "${Money.format(task.amount)} · $daysLeft gün kaldı",
@@ -418,7 +419,7 @@ private fun AddTaskBar(
                     colors = CheckboxDefaults.colors(uncheckedColor = TextSecondary),
                 )
                 Text(
-                    text = if (daily) "Günlük · ay boyunca her gün kendiliğinden düşer" else "Günlük",
+                    text = if (daily) "Günlük · ay sonundan ay sonuna her gün düşer" else "Günlük",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                 )
