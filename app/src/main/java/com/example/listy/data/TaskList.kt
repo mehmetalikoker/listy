@@ -3,7 +3,7 @@ package com.example.listy.data
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
-enum class ListType { TODO, PAYMENT }
+enum class ListType { TODO, PAYMENT, REMINDER }
 
 data class TaskList(
     val id: Long,
@@ -28,6 +28,8 @@ data class Task(
      * (bkz. [DailyPeriod]). Elle tamamlanmaz; her ay sonunda tutar yeniden dolar.
      */
     val daily: Boolean = false,
+    /** Hatırlatıcı listelerinde görevin tarihi. Diğer listelerde null. */
+    val date: LocalDate? = null,
 )
 
 /**

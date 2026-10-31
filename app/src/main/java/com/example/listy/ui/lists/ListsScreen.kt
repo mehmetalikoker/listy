@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -214,7 +216,11 @@ private fun ListRow(
     ) {
         Icon(
             painter = painterResource(
-                if (list.type == ListType.PAYMENT) R.drawable.ic_payments else R.drawable.ic_list
+                when (list.type) {
+                    ListType.PAYMENT -> R.drawable.ic_payments
+                    ListType.REMINDER -> R.drawable.ic_reminder
+                    ListType.TODO -> R.drawable.ic_list
+                }
             ),
             contentDescription = null,
             tint = if (themed) Color.White else listColor(list.colorIndex),
@@ -316,6 +322,7 @@ private fun EmptyState(themed: Boolean) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun NewListDialog(
     onDismiss: () -> Unit,
@@ -349,7 +356,8 @@ private fun NewListDialog(
                 )
                 Spacer(Modifier.padding(6.dp))
                 Text("Liste türü", style = MaterialTheme.typography.labelLarge, color = TextSecondary)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Üç çip dar ekrana sığmazsa alt satıra geçer
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = type == ListType.TODO,
                         onClick = { type = ListType.TODO },
@@ -361,6 +369,12 @@ private fun NewListDialog(
                         onClick = { type = ListType.PAYMENT },
                         label = { Text("Ödeme") },
                         leadingIcon = { Icon(painterResource(R.drawable.ic_payments), null, Modifier.size(18.dp)) },
+                    )
+                    FilterChip(
+                        selected = type == ListType.REMINDER,
+                        onClick = { type = ListType.REMINDER },
+                        label = { Text("Hatırlatıcı") },
+                        leadingIcon = { Icon(painterResource(R.drawable.ic_reminder), null, Modifier.size(18.dp)) },
                     )
                 }
             }

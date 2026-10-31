@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.listy.R
 import com.example.listy.data.DailyPeriod
+import com.example.listy.data.DateInput
 import com.example.listy.data.ListType
 import com.example.listy.data.Money
 import com.example.listy.data.Task
@@ -86,9 +87,9 @@ fun ListDetailScreen(
     tasks: List<Task>,
     onBack: () -> Unit,
     onChangeColor: (Int) -> Unit,
-    onAddTask: (title: String, amount: Long?, daily: Boolean) -> Unit,
+    onAddTask: (title: String, amount: Long?, daily: Boolean, date: LocalDate?) -> Unit,
     onToggleDone: (Long) -> Unit,
-    onEditTask: (id: Long, title: String, amount: Long?, daily: Boolean) -> Unit,
+    onEditTask: (id: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) -> Unit,
     onDeleteTask: (Long) -> Unit,
 ) {
     var adding by rememberSaveable { mutableStateOf(false) }
@@ -101,10 +102,12 @@ fun ListDetailScreen(
     BackHandler(enabled = adding) { adding = false }
 
     val today = LocalDate.now()
-    // Yeni eklenen en üstte
-    val openTasks = tasks.filter { !it.isCompleted(today) }.sortedByDescending { it.createdAt }
-    val doneTasks = tasks.filter { it.isCompleted(today) }.sortedByDescending { it.createdAt }
     val isPayment = type == ListType.PAYMENT
+    val isReminder = type == ListType.REMINDER
+    // Yeni eklenen en üstte; hatırlatıcıda tarihi en yakın olan en üstte
+    val openTasks = tasks.filter { !it.isCompleted(today) }.sortedByDescending { it.createdAt }
+        .let { if (isReminder) it.sortedBy { task -> task.date } else it }
+    val doneTasks = tasks.filter { it.isCompleted(today) }.sortedByDescending { it.createdAt }
 
     Box(
         modifier = Modifier
@@ -206,6 +209,7 @@ fun ListDetailScreen(
         if (adding) {
             AddTaskBar(
                 withAmount = isPayment,
+                withDate = isReminder,
                 onAdd = onAddTask,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -236,9 +240,10 @@ fun ListDetailScreen(
         EditTaskDialog(
             task = task,
             withAmount = isPayment,
+            withDate = isReminder,
             onDismiss = { editingId = null },
-            onSave = { newTitle, amount, daily ->
-                onEditTask(task.id, newTitle, amount, daily)
+            onSave = { newTitle, amount, daily, date ->
+                onEditTask(task.id, newTitle, amount, daily, date)
                 editingId = null
             },
         )
@@ -314,6 +319,14 @@ private fun TaskCard(
                     color = TextSecondary,
                 )
             }
+            task.date?.let { date ->
+                // Günü geçmiş ve yapılmamış hatırlatıcı kırmızı
+                Text(
+                    text = DateInput.formatLong(date, today),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (!completed && date < today) DeleteRed else TextSecondary,
+                )
+            }
         }
         task.amount?.let { amount ->
             Text(
@@ -349,17 +362,20 @@ private fun TaskCard(
 private fun EditTaskDialog(
     task: Task,
     withAmount: Boolean,
+    withDate: Boolean,
     onDismiss: () -> Unit,
-    onSave: (title: String, amount: Long?, daily: Boolean) -> Unit,
+    onSave: (title: String, amount: Long?, daily: Boolean, date: LocalDate?) -> Unit,
 ) {
     var title by rememberSaveable { mutableStateOf(task.title) }
     var amountText by rememberSaveable {
         mutableStateOf(task.amount?.let { Money.format(it).removeSuffix(" TL") } ?: "")
     }
     var daily by rememberSaveable { mutableStateOf(task.daily) }
+    var dateText by rememberSaveable { mutableStateOf(task.date?.let(DateInput::formatShort) ?: "") }
 
     val amount = Money.parse(amountText)
-    val canSave = title.isNotBlank() && (!withAmount || amount != null)
+    val date = DateInput.parse(dateText)
+    val canSave = title.isNotBlank() && (!withAmount || amount != null) && (!withDate || date != null)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -395,11 +411,24 @@ private fun EditTaskDialog(
                         Text("Günlük", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
+                if (withDate) {
+                    OutlinedTextField(
+                        value = dateText,
+                        onValueChange = { dateText = it },
+                        label = { Text("Tarih (gg.aa.yyyy)") },
+                        singleLine = true,
+                        isError = dateText.isNotEmpty() && date == null,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(title, if (withAmount) amount else null, withAmount && daily) },
+                onClick = {
+                    onSave(title, if (withAmount) amount else null, withAmount && daily, if (withDate) date else null)
+                },
                 enabled = canSave,
             ) { Text("Kaydet") }
         },
@@ -544,25 +573,29 @@ private fun PaymentSummary(remaining: Long, paid: Long) {
 @Composable
 private fun AddTaskBar(
     withAmount: Boolean,
-    onAdd: (title: String, amount: Long?, daily: Boolean) -> Unit,
+    withDate: Boolean,
+    onAdd: (title: String, amount: Long?, daily: Boolean, date: LocalDate?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var title by rememberSaveable { mutableStateOf("") }
     var amountText by rememberSaveable { mutableStateOf("") }
     var daily by rememberSaveable { mutableStateOf(false) }
+    var dateText by rememberSaveable { mutableStateOf("") }
     val titleFocus = remember { FocusRequester() }
     val amountFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { titleFocus.requestFocus() }
 
     val amount = Money.parse(amountText)
-    val canAdd = title.isNotBlank() && (!withAmount || amount != null)
+    val date = DateInput.parse(dateText)
+    val canAdd = title.isNotBlank() && (!withAmount || amount != null) && (!withDate || date != null)
 
     // To Do gibi: ekledikten sonra alan açık kalır, art arda görev yazılabilir
     val submit = {
         if (canAdd) {
-            onAdd(title, if (withAmount) amount else null, withAmount && daily)
+            onAdd(title, if (withAmount) amount else null, withAmount && daily, if (withDate) date else null)
             title = ""
             amountText = ""
+            dateText = ""
             daily = false
             titleFocus.requestFocus()
         }
@@ -587,7 +620,7 @@ private fun AddTaskBar(
                 placeholder = "Görev ekle",
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
-                    imeAction = if (withAmount) ImeAction.Next else ImeAction.Done,
+                    imeAction = if (withAmount || withDate) ImeAction.Next else ImeAction.Done,
                 ),
                 keyboardActions = KeyboardActions(
                     onNext = { amountFocus.requestFocus() },
@@ -606,6 +639,23 @@ private fun AddTaskBar(
                     isError = amountText.isNotEmpty() && amount == null,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
+                    modifier = Modifier
+                        .width(110.dp)
+                        .focusRequester(amountFocus),
+                )
+            }
+            if (withDate) {
+                Spacer(Modifier.width(12.dp))
+                BarTextField(
+                    value = dateText,
+                    onValueChange = { dateText = it },
+                    placeholder = "gg.aa.yyyy",
+                    isError = dateText.isNotEmpty() && date == null,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Done,
                     ),
                     keyboardActions = KeyboardActions(onDone = { submit() }),
@@ -689,9 +739,9 @@ private fun ListDetailPreview() {
             ),
             onBack = {},
             onChangeColor = {},
-            onAddTask = { _, _, _ -> },
+            onAddTask = { _, _, _, _ -> },
             onToggleDone = {},
-            onEditTask = { _, _, _, _ -> },
+            onEditTask = { _, _, _, _, _ -> },
             onDeleteTask = {},
         )
     }

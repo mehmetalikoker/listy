@@ -6,6 +6,7 @@ import com.example.listy.data.ListRepository
 import com.example.listy.data.ListType
 import com.example.listy.data.Task
 import com.example.listy.data.TaskList
+import java.time.LocalDate
 import kotlinx.coroutines.flow.StateFlow
 
 class ListsViewModel(application: Application) : AndroidViewModel(application) {
@@ -34,16 +35,16 @@ class ListsViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteList(listId: Long) = repository.deleteList(listId)
 
     /** [amount] kuruş cinsinden; sadece ödeme listelerinde verilir. */
-    fun addTask(listId: Long, title: String, amount: Long?, daily: Boolean) {
+    fun addTask(listId: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) {
         val trimmed = title.trim()
-        if (trimmed.isNotEmpty()) repository.addTask(listId, trimmed, amount, daily)
+        if (trimmed.isNotEmpty()) repository.addTask(listId, trimmed, amount, daily, date)
     }
 
     fun toggleDone(taskId: Long) = repository.toggleDone(taskId)
 
-    fun editTask(taskId: Long, title: String, amount: Long?, daily: Boolean) {
+    fun editTask(taskId: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) {
         val trimmed = title.trim()
-        if (trimmed.isNotEmpty()) repository.editTask(taskId, trimmed, amount, daily)
+        if (trimmed.isNotEmpty()) repository.editTask(taskId, trimmed, amount, daily, date)
     }
 
     fun deleteTask(taskId: Long) = repository.deleteTask(taskId)

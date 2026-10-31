@@ -4,6 +4,7 @@ import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.time.LocalDate
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -60,16 +61,19 @@ class ListRepository(context: Context) {
         saveTasks()
     }
 
-    fun addTask(listId: Long, title: String, amount: Long?, daily: Boolean) {
+    fun addTask(listId: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) {
         val now = System.currentTimeMillis()
-        _tasks.value += Task(id = now, listId = listId, title = title, createdAt = now, amount = amount, daily = daily)
+        _tasks.value += Task(
+            id = now, listId = listId, title = title, createdAt = now,
+            amount = amount, daily = daily, date = date,
+        )
         saveTasks()
     }
 
     fun toggleDone(taskId: Long) = updateTask(taskId) { it.copy(done = !it.done) }
 
-    fun editTask(taskId: Long, title: String, amount: Long?, daily: Boolean) =
-        updateTask(taskId) { it.copy(title = title, amount = amount, daily = daily) }
+    fun editTask(taskId: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) =
+        updateTask(taskId) { it.copy(title = title, amount = amount, daily = daily, date = date) }
 
     fun deleteTask(taskId: Long) {
         _tasks.value = _tasks.value.filterNot { it.id == taskId }
@@ -101,6 +105,7 @@ class ListRepository(context: Context) {
             important = obj.optBoolean("important"),
             amount = if (obj.has("amount")) obj.getLong("amount") else null,
             daily = obj.optBoolean("daily"),
+            date = if (obj.has("date")) LocalDate.parse(obj.getString("date")) else null,
         )
     }
 
@@ -123,6 +128,7 @@ class ListRepository(context: Context) {
             .put("important", it.important)
             .put("daily", it.daily)
             .apply { it.amount?.let { amount -> put("amount", amount) } }
+            .apply { it.date?.let { date -> put("date", date.toString()) } }
     }
 
     private fun <T> readArray(key: String, parse: (JSONObject) -> T): List<T> {

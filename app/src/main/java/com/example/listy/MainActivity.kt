@@ -100,7 +100,9 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
             tasks = tasks.filter { it.listId == openList.id },
             onBack = { openListId = null },
             onChangeColor = { viewModel.setListColor(openList.id, it) },
-            onAddTask = { title, amount, daily -> viewModel.addTask(openList.id, title, amount, daily) },
+            onAddTask = { title, amount, daily, date ->
+                viewModel.addTask(openList.id, title, amount, daily, date)
+            },
             onToggleDone = viewModel::toggleDone,
             onEditTask = viewModel::editTask,
             onDeleteTask = viewModel::deleteTask,
