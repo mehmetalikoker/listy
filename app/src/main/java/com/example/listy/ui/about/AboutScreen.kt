@@ -44,7 +44,7 @@ import com.example.listy.ui.theme.TextPrimary
 import com.example.listy.ui.theme.TextSecondary
 
 private const val DEVELOPER_NAME = "Mehmet Ali Köker"
-private const val DEVELOPER_EMAIL = "mehmetalikoker@outlook.com"
+private const val DEVELOPER_GITHUB = "https://github.com/mehmetalikoker"
 
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
@@ -117,15 +117,15 @@ fun AboutScreen(onBack: () -> Unit) {
             Section("Geliştirici") {
                 Text(DEVELOPER_NAME, style = MaterialTheme.typography.bodyLarge, color = TextPrimary)
                 Text(
-                    text = DEVELOPER_EMAIL,
+                    text = DEVELOPER_GITHUB.removePrefix("https://"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Accent,
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
                         .clickable {
-                            // E-posta uygulaması yoksa sessizce geç
+                            // Tarayıcı yoksa sessizce geç
                             runCatching {
-                                context.startActivity(Intent(Intent.ACTION_SENDTO, "mailto:$DEVELOPER_EMAIL".toUri()))
+                                context.startActivity(Intent(Intent.ACTION_VIEW, DEVELOPER_GITHUB.toUri()))
                             }
                         },
                 )
