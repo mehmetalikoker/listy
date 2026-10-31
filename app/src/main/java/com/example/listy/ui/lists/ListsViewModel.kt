@@ -44,7 +44,7 @@ class ListsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun reorderLists(ids: List<Long>) = repository.reorderLists(ids)
 
-    fun reorderTasks(ids: List<Long>) = repository.reorderTasks(ids)
+    fun moveTask(taskId: Long, openOrder: List<Long>) = repository.moveTask(taskId, openOrder)
 
     /** [amount] kuruş cinsinden; sadece ödeme listelerinde verilir. */
     fun addTask(listId: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) {

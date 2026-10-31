@@ -105,14 +105,22 @@ class ListRepository(context: Context) {
         updateTask(taskId) { it.copy(title = title, amount = amount, daily = daily, date = date) }
 
     /**
-     * Verilen görevleri, dizide kapladıkları yerler korunarak [ids] sırasına dizer.
-     * Diğer listelerin ve tamamlanmışların yeri değişmez.
+     * Sürüklenen görevi taşır; başka hiçbir görevin yeri değişmez.
+     * [openOrder] bırakıldıktan sonraki açık görev sırasıdır. Görev, yeni sırada üstündeki
+     * görevin hemen arkasına, en üstteyse listenin en başına konur. Böylece tamamlanmışlar
+     * kendi yerlerinde kalır ve geri alınınca eski sıralarına döner.
      */
-    fun reorderTasks(ids: List<Long>) {
-        val byId = _tasks.value.associateBy { it.id }
-        val queue = ids.mapNotNull { byId[it] }.iterator()
-        val idSet = ids.toSet()
-        _tasks.value = _tasks.value.map { if (it.id in idSet) queue.next() else it }
+    fun moveTask(taskId: Long, openOrder: List<Long>) {
+        val task = _tasks.value.find { it.id == taskId } ?: return
+        val rest = _tasks.value.filterNot { it.id == taskId }.toMutableList()
+        val above = openOrder.getOrNull(openOrder.indexOf(taskId) - 1)
+        val index = if (above == null) {
+            rest.indexOfFirst { it.listId == task.listId }.takeIf { it >= 0 } ?: rest.size
+        } else {
+            rest.indexOfFirst { it.id == above } + 1
+        }
+        rest.add(index, task)
+        _tasks.value = rest
         saveTasks()
     }
 

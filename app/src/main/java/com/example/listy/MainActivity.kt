@@ -133,7 +133,7 @@ private fun ListyApp(viewModel: ListsViewModel, lightMode: Boolean) {
             onResetDone = { viewModel.resetDone(openList.id) },
             onEditTask = viewModel::editTask,
             onDeleteTask = viewModel::deleteTask,
-            onReorderTasks = viewModel::reorderTasks,
+            onMoveTask = viewModel::moveTask,
         )
     }
 }

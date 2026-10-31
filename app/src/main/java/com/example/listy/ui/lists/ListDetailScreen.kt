@@ -102,7 +102,7 @@ fun ListDetailScreen(
     onResetDone: () -> Unit,
     onEditTask: (id: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) -> Unit,
     onDeleteTask: (Long) -> Unit,
-    onReorderTasks: (List<Long>) -> Unit,
+    onMoveTask: (taskId: Long, openOrder: List<Long>) -> Unit,
 ) {
     var adding by rememberSaveable { mutableStateOf(false) }
     var showCompleted by rememberSaveable { mutableStateOf(true) }
@@ -230,7 +230,10 @@ fun ListDetailScreen(
                                 .longPressDraggableHandle(
                                     enabled = !isReminder,
                                     onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
-                                    onDragStopped = { onReorderTasks(orderedOpen.map { it.id }) },
+                                    onDragStopped = {
+                                        // Yerinde bırakıldıysa kayıttaki sıraya dokunma
+                                        if (orderedOpen != openTasks) onMoveTask(task.id, orderedOpen.map { it.id })
+                                    },
                                 )
                                 .then(if (dragging) Modifier.shadow(8.dp, RoundedCornerShape(6.dp)) else Modifier),
                         )
@@ -885,7 +888,7 @@ private fun ListDetailPreview() {
             onResetDone = {},
             onEditTask = { _, _, _, _, _ -> },
             onDeleteTask = {},
-            onReorderTasks = {},
+            onMoveTask = { _, _ -> },
         )
     }
 }
