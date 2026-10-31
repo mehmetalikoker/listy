@@ -22,6 +22,17 @@ class ListRepository(context: Context) {
     private val _tasks = MutableStateFlow(loadTasks())
     val tasks: StateFlow<List<Task>> = _tasks.asStateFlow()
 
+    // Ana ekran teması; null = varsayılan koyu arka plan
+    private val _homeColorIndex = MutableStateFlow(
+        if (prefs.contains(KEY_HOME_COLOR)) prefs.getInt(KEY_HOME_COLOR, 0) else null
+    )
+    val homeColorIndex: StateFlow<Int?> = _homeColorIndex.asStateFlow()
+
+    fun setHomeColor(colorIndex: Int) {
+        _homeColorIndex.value = colorIndex
+        prefs.edit().putInt(KEY_HOME_COLOR, colorIndex).apply()
+    }
+
     /** Yeni listeyi oluşturur ve id'sini döner. */
     fun addList(name: String, type: ListType): Long {
         val now = System.currentTimeMillis()
@@ -129,5 +140,6 @@ class ListRepository(context: Context) {
     private companion object {
         const val KEY_LISTS = "lists"
         const val KEY_TASKS = "tasks"
+        const val KEY_HOME_COLOR = "homeColorIndex"
     }
 }

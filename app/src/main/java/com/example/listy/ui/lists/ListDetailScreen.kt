@@ -410,7 +410,7 @@ private fun EditTaskDialog(
 }
 
 @Composable
-private fun ThemeDialog(
+internal fun ThemeDialog(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,

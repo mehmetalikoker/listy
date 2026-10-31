@@ -64,12 +64,15 @@ private fun SplashScreen() {
 private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
     val lists by viewModel.lists.collectAsState()
     val tasks by viewModel.tasks.collectAsState()
+    val homeColorIndex by viewModel.homeColorIndex.collectAsState()
     var openListId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     val openList = lists.find { it.id == openListId }
 
     if (openList == null) {
         ListsScreen(
+            colorIndex = homeColorIndex,
+            onChangeColor = viewModel::setHomeColor,
             lists = lists.map { list ->
                 ListSummary(
                     id = list.id,

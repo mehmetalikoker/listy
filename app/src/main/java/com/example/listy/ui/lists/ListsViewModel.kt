@@ -14,6 +14,9 @@ class ListsViewModel(application: Application) : AndroidViewModel(application) {
 
     val lists: StateFlow<List<TaskList>> = repository.lists
     val tasks: StateFlow<List<Task>> = repository.tasks
+    val homeColorIndex: StateFlow<Int?> = repository.homeColorIndex
+
+    fun setHomeColor(colorIndex: Int) = repository.setHomeColor(colorIndex)
 
     /** Liste oluşturulursa id'sini, ad boşsa null döner. */
     fun createList(name: String, type: ListType): Long? {

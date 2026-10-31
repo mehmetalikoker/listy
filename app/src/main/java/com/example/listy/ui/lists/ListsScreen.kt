@@ -52,9 +52,11 @@ import com.example.listy.data.Money
 import com.example.listy.ui.theme.Accent
 import com.example.listy.ui.theme.DeleteRed
 import com.example.listy.ui.theme.EditYellow
+import com.example.listy.ui.theme.ListThemes
 import com.example.listy.ui.theme.ListyTheme
 import com.example.listy.ui.theme.TextSecondary
 import com.example.listy.ui.theme.listColor
+import com.example.listy.ui.theme.listFabColor
 
 /** Ana ekranda gösterilecek liste özeti. */
 data class ListSummary(
@@ -69,6 +71,8 @@ data class ListSummary(
 
 @Composable
 fun ListsScreen(
+    colorIndex: Int?,
+    onChangeColor: (Int) -> Unit,
     lists: List<ListSummary>,
     onOpenList: (Long) -> Unit,
     onCreateList: (String, ListType) -> Unit,
@@ -78,27 +82,42 @@ fun ListsScreen(
     var showDialog by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var pickingTheme by rememberSaveable { mutableStateOf(false) }
+    val themed = colorIndex != null
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(if (themed) listColor(colorIndex!!) else MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
-        Text(
-            text = "Listelerim",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(start = 20.dp, top = 24.dp, bottom = 12.dp),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 20.dp, end = 8.dp, top = 24.dp, bottom = 12.dp),
+        ) {
+            Text(
+                text = "Listelerim",
+                style = MaterialTheme.typography.headlineMedium,
+                color = if (themed) Color.White else Color.Unspecified,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = { pickingTheme = true }) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_palette),
+                    contentDescription = "Tema",
+                    tint = if (themed) Color.White else TextSecondary,
+                )
+            }
+        }
         HorizontalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant,
+            color = if (themed) Color.White.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outlineVariant,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
 
         Box(modifier = Modifier.weight(1f)) {
             if (lists.isEmpty()) {
-                EmptyState()
+                EmptyState(themed)
             } else {
                 // Alt boşluk: son satırın ikonları artı butonunun altında kalmasın
                 LazyColumn(
@@ -108,6 +127,7 @@ fun ListsScreen(
                     items(lists, key = { it.id }) { list ->
                         ListRow(
                             list = list,
+                            themed = themed,
                             onClick = { onOpenList(list.id) },
                             onEdit = { editingId = list.id },
                             onDelete = { deletingId = list.id },
@@ -118,11 +138,19 @@ fun ListsScreen(
 
             AddFab(
                 onClick = { showDialog = true },
-                containerColor = Accent,
+                containerColor = if (themed) listFabColor(colorIndex!!) else Accent,
                 contentDescription = "Yeni liste",
                 modifier = Modifier.align(Alignment.BottomEnd),
             )
         }
+    }
+
+    if (pickingTheme) {
+        ThemeDialog(
+            selectedIndex = colorIndex?.mod(ListThemes.size) ?: -1,
+            onSelect = onChangeColor,
+            onDismiss = { pickingTheme = false },
+        )
     }
 
     if (showDialog) {
@@ -170,10 +198,13 @@ fun ListsScreen(
 @Composable
 private fun ListRow(
     list: ListSummary,
+    themed: Boolean,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    // Renkli zeminde liste/sarı/kırmızı tonları kaybolabilir; hepsi beyaz
+    val secondary = if (themed) Color.White.copy(alpha = 0.8f) else TextSecondary
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -186,13 +217,14 @@ private fun ListRow(
                 if (list.type == ListType.PAYMENT) R.drawable.ic_payments else R.drawable.ic_list
             ),
             contentDescription = null,
-            tint = listColor(list.colorIndex),
+            tint = if (themed) Color.White else listColor(list.colorIndex),
             modifier = Modifier.size(24.dp),
         )
         Spacer(Modifier.width(24.dp))
         Text(
             text = list.name,
             style = MaterialTheme.typography.bodyLarge,
+            color = if (themed) Color.White else Color.Unspecified,
             modifier = Modifier.weight(1f),
         )
         if (list.type == ListType.PAYMENT) {
@@ -200,14 +232,14 @@ private fun ListRow(
                 Text(
                     text = Money.format(list.remainingAmount),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = secondary,
                 )
             }
         } else if (list.openTaskCount > 0) {
             Text(
                 text = list.openTaskCount.toString(),
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = secondary,
             )
         }
         Spacer(Modifier.width(8.dp))
@@ -215,7 +247,7 @@ private fun ListRow(
             Icon(
                 painter = painterResource(R.drawable.ic_edit),
                 contentDescription = "Listeyi düzenle",
-                tint = EditYellow,
+                tint = if (themed) Color.White else EditYellow,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -223,7 +255,7 @@ private fun ListRow(
             Icon(
                 painter = painterResource(R.drawable.ic_delete),
                 contentDescription = "Listeyi sil",
-                tint = DeleteRed,
+                tint = if (themed) Color.White else DeleteRed,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -266,15 +298,19 @@ private fun RenameListDialog(
 }
 
 @Composable
-private fun EmptyState() {
+private fun EmptyState(themed: Boolean) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Henüz liste yok", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Henüz liste yok",
+                style = MaterialTheme.typography.titleMedium,
+                color = if (themed) Color.White else Color.Unspecified,
+            )
             Spacer(Modifier.padding(4.dp))
             Text(
                 "Sağ alttaki + ile bir liste oluştur",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = if (themed) Color.White.copy(alpha = 0.8f) else TextSecondary,
             )
         }
     }
@@ -345,6 +381,8 @@ private fun NewListDialog(
 private fun ListsScreenPreview() {
     ListyTheme {
         ListsScreen(
+            colorIndex = null,
+            onChangeColor = {},
             lists = listOf(
                 ListSummary(1, "Ödemeler", 0, ListType.PAYMENT, 2, 22_000_000),
                 ListSummary(2, "TO DO", 1, ListType.TODO, 4, 0),
