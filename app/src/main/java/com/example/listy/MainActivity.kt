@@ -130,6 +130,7 @@ private fun ListyApp(viewModel: ListsViewModel, lightMode: Boolean) {
                 viewModel.addTask(openList.id, title, amount, daily, date)
             },
             onToggleDone = viewModel::toggleDone,
+            onResetDone = { viewModel.resetDone(openList.id) },
             onEditTask = viewModel::editTask,
             onDeleteTask = viewModel::deleteTask,
             onReorderTasks = viewModel::reorderTasks,

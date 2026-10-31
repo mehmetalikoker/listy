@@ -99,6 +99,7 @@ fun ListDetailScreen(
     onChangeColor: (Int) -> Unit,
     onAddTask: (title: String, amount: Long?, daily: Boolean, date: LocalDate?) -> Unit,
     onToggleDone: (Long) -> Unit,
+    onResetDone: () -> Unit,
     onEditTask: (id: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) -> Unit,
     onDeleteTask: (Long) -> Unit,
     onReorderTasks: (List<Long>) -> Unit,
@@ -182,6 +183,24 @@ fun ListDetailScreen(
                             .background(Color.White.copy(alpha = 0.25f))
                             .padding(horizontal = 10.dp, vertical = 4.dp),
                     )
+                    // Tek tuşla tüm tamamlananları yeniden aç; tamamlanan yoksa soluk ve pasif
+                    val canReset = doneTasks.isNotEmpty()
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = if (canReset) 0.25f else 0.1f))
+                            .clickable(enabled = canReset, onClick = onResetDone),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_refresh),
+                            contentDescription = "Tamamlananları geri al",
+                            tint = Color.White.copy(alpha = if (canReset) 1f else 0.4f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
             if (isPayment) {
@@ -845,6 +864,7 @@ private fun ListDetailPreview() {
             onChangeColor = {},
             onAddTask = { _, _, _, _ -> },
             onToggleDone = {},
+            onResetDone = {},
             onEditTask = { _, _, _, _, _ -> },
             onDeleteTask = {},
             onReorderTasks = {},

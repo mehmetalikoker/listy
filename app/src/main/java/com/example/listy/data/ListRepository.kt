@@ -95,6 +95,12 @@ class ListRepository(context: Context) {
 
     fun toggleDone(taskId: Long) = updateTask(taskId) { it.copy(done = !it.done) }
 
+    /** Listedeki tüm tamamlanmış görevleri yeniden açar (ör. yeni ay başında ödemeler). */
+    fun resetDone(listId: Long) {
+        _tasks.value = _tasks.value.map { if (it.listId == listId && it.done) it.copy(done = false) else it }
+        saveTasks()
+    }
+
     fun editTask(taskId: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) =
         updateTask(taskId) { it.copy(title = title, amount = amount, daily = daily, date = date) }
 
