@@ -297,6 +297,15 @@ private fun TaskCard(
                     tint = TextSecondary,
                 )
             }
+        } else if (task.date != null) {
+            // Hatırlatıcı tamamlanmaz; işaret yerine zil
+            Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_reminder),
+                    contentDescription = "Hatırlatıcı",
+                    tint = TextSecondary,
+                )
+            }
         } else {
             IconButton(onClick = { onToggleDone(task.id) }) {
                 CheckCircle(checked = task.done)

@@ -67,6 +67,9 @@ fun Task.paidAmount(today: LocalDate = LocalDate.now()): Long {
 
 fun Task.remainingAmount(today: LocalDate = LocalDate.now()): Long = (amount ?: 0) - paidAmount(today)
 
-/** Günlük ödeme hiç tamamlanmaz (her ay sonu yeniden dolar); diğerleri elle işaretlenir. */
+/**
+ * Günlük ödeme (her ay sonu yeniden dolar) ve hatırlatıcı hiç tamamlanmaz;
+ * diğerleri elle işaretlenir.
+ */
 fun Task.isCompleted(today: LocalDate = LocalDate.now()): Boolean =
-    if (daily) false else done
+    if (daily || date != null) false else done
