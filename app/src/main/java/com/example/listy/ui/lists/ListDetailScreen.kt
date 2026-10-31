@@ -361,7 +361,7 @@ private fun TaskCard(
             task.date?.let { date ->
                 // Günü geçmiş ve yapılmamış hatırlatıcı kırmızı
                 Text(
-                    text = DateInput.formatLong(date, today),
+                    text = DateInput.formatRelative(date, today),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (!completed && date < today) DeleteRed else TextSecondary,
                 )
@@ -410,11 +410,20 @@ private fun EditTaskDialog(
         mutableStateOf(task.amount?.let { Money.format(it).removeSuffix(" TL") } ?: "")
     }
     var daily by rememberSaveable { mutableStateOf(task.daily) }
-    var dateText by rememberSaveable { mutableStateOf(task.date?.let(DateInput::formatShort) ?: "") }
+    var dateEpoch by rememberSaveable { mutableStateOf(task.date?.toEpochDay()) }
+    var pickingDate by rememberSaveable { mutableStateOf(false) }
 
     val amount = Money.parse(amountText)
-    val date = DateInput.parse(dateText)
+    val date = dateEpoch?.let(LocalDate::ofEpochDay)
     val canSave = title.isNotBlank() && (!withAmount || amount != null) && (!withDate || date != null)
+
+    if (pickingDate) {
+        ReminderDatePickerDialog(
+            initial = date,
+            onPick = { dateEpoch = it.toEpochDay() },
+            onDismiss = { pickingDate = false },
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -451,15 +460,7 @@ private fun EditTaskDialog(
                     }
                 }
                 if (withDate) {
-                    OutlinedTextField(
-                        value = dateText,
-                        onValueChange = { dateText = it },
-                        label = { Text("Tarih (gg.aa.yyyy)") },
-                        singleLine = true,
-                        isError = dateText.isNotEmpty() && date == null,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    DateButton(date = date, onClick = { pickingDate = true })
                 }
             }
         },
@@ -619,13 +620,14 @@ private fun AddTaskBar(
     var title by rememberSaveable { mutableStateOf("") }
     var amountText by rememberSaveable { mutableStateOf("") }
     var daily by rememberSaveable { mutableStateOf(false) }
-    var dateText by rememberSaveable { mutableStateOf("") }
+    var dateEpoch by rememberSaveable { mutableStateOf<Long?>(null) }
+    var pickingDate by rememberSaveable { mutableStateOf(false) }
     val titleFocus = remember { FocusRequester() }
     val amountFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { titleFocus.requestFocus() }
 
     val amount = Money.parse(amountText)
-    val date = DateInput.parse(dateText)
+    val date = dateEpoch?.let(LocalDate::ofEpochDay)
     val canAdd = title.isNotBlank() && (!withAmount || amount != null) && (!withDate || date != null)
 
     // To Do gibi: ekledikten sonra alan açık kalır, art arda görev yazılabilir
@@ -634,10 +636,18 @@ private fun AddTaskBar(
             onAdd(title, if (withAmount) amount else null, withAmount && daily, if (withDate) date else null)
             title = ""
             amountText = ""
-            dateText = ""
+            dateEpoch = null
             daily = false
             titleFocus.requestFocus()
         }
+    }
+
+    if (pickingDate) {
+        ReminderDatePickerDialog(
+            initial = date,
+            onPick = { dateEpoch = it.toEpochDay() },
+            onDismiss = { pickingDate = false },
+        )
     }
 
     Column(
@@ -659,11 +669,12 @@ private fun AddTaskBar(
                 placeholder = "Görev ekle",
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
-                    imeAction = if (withAmount || withDate) ImeAction.Next else ImeAction.Done,
+                    imeAction = if (withAmount) ImeAction.Next else ImeAction.Done,
                 ),
                 keyboardActions = KeyboardActions(
                     onNext = { amountFocus.requestFocus() },
-                    onDone = { submit() },
+                    // Tarih seçilmediyse önce takvimi aç
+                    onDone = { if (withDate && date == null) pickingDate = true else submit() },
                 ),
                 modifier = Modifier
                     .weight(1f)
@@ -687,21 +698,8 @@ private fun AddTaskBar(
                 )
             }
             if (withDate) {
-                Spacer(Modifier.width(12.dp))
-                BarTextField(
-                    value = dateText,
-                    onValueChange = { dateText = it },
-                    placeholder = "gg.aa.yyyy",
-                    isError = dateText.isNotEmpty() && date == null,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done,
-                    ),
-                    keyboardActions = KeyboardActions(onDone = { submit() }),
-                    modifier = Modifier
-                        .width(110.dp)
-                        .focusRequester(amountFocus),
-                )
+                Spacer(Modifier.width(8.dp))
+                DateButton(date = date, onClick = { pickingDate = true })
             }
             IconButton(onClick = submit, enabled = canAdd) {
                 Icon(
@@ -731,6 +729,32 @@ private fun AddTaskBar(
                 )
             }
         }
+    }
+}
+
+/** Seçili tarihi "23 Eylül" diye gösterir; dokununca takvim açılır. */
+@Composable
+private fun DateButton(date: LocalDate?, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, TextSecondary.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_calendar),
+            contentDescription = null,
+            tint = if (date != null) TextPrimary else TextSecondary,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = date?.let(DateInput::format) ?: "Tarih seç",
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (date != null) TextPrimary else TextSecondary,
+        )
     }
 }
 
