@@ -1,5 +1,6 @@
 package com.example.listy
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -10,9 +11,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.core.view.WindowCompat
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,20 +36,22 @@ import com.example.listy.ui.theme.ListyTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Uygulama hep koyu; durum çubuğu ikonları açık renk olsun
+        // Varsayılan koyu; açık görünümde ikon rengi ListyApp içinde ayarlanır
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         setContent {
-            ListyTheme {
+            val viewModel: ListsViewModel = viewModel()
+            val lightMode by viewModel.lightMode.collectAsState()
+            ListyTheme(light = lightMode) {
                 // Soğuk açılışta 2 sn açılış görseli; ekran dönünce tekrar gösterilmez
                 var showSplash by rememberSaveable { mutableStateOf(true) }
                 LaunchedEffect(Unit) {
                     delay(2000)
                     showSplash = false
                 }
-                if (showSplash) SplashScreen() else ListyApp()
+                if (showSplash) SplashScreen() else ListyApp(viewModel, lightMode)
             }
         }
     }
@@ -62,7 +68,7 @@ private fun SplashScreen() {
 }
 
 @Composable
-private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
+private fun ListyApp(viewModel: ListsViewModel, lightMode: Boolean) {
     val lists by viewModel.lists.collectAsState()
     val tasks by viewModel.tasks.collectAsState()
     val homeColorIndex by viewModel.homeColorIndex.collectAsState()
@@ -71,6 +77,17 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
 
     val openList = lists.find { it.id == openListId }
 
+    // Beyaz zeminde durum çubuğu ikonları koyu, renkli/koyu zeminde açık
+    val lightBars = lightMode && (showAbout || (openList == null && homeColorIndex == null))
+    val view = LocalView.current
+    SideEffect {
+        val window = (view.context as Activity).window
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = lightBars
+            isAppearanceLightNavigationBars = lightBars
+        }
+    }
+
     if (showAbout) {
         BackHandler { showAbout = false }
         AboutScreen(onBack = { showAbout = false })
@@ -78,6 +95,8 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
         ListsScreen(
             colorIndex = homeColorIndex,
             onChangeColor = viewModel::setHomeColor,
+            lightMode = lightMode,
+            onChangeLightMode = viewModel::setLightMode,
             onOpenAbout = { showAbout = true },
             lists = lists.map { list ->
                 ListSummary(

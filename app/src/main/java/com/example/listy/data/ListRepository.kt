@@ -29,9 +29,21 @@ class ListRepository(context: Context) {
     )
     val homeColorIndex: StateFlow<Int?> = _homeColorIndex.asStateFlow()
 
-    fun setHomeColor(colorIndex: Int) {
+    /** null: ana ekran rengi kaldırılır, görünümün (koyu/açık) arka planı kullanılır. */
+    fun setHomeColor(colorIndex: Int?) {
         _homeColorIndex.value = colorIndex
-        prefs.edit().putInt(KEY_HOME_COLOR, colorIndex).apply()
+        prefs.edit().apply {
+            if (colorIndex == null) remove(KEY_HOME_COLOR) else putInt(KEY_HOME_COLOR, colorIndex)
+        }.apply()
+    }
+
+    // Açık görünüm: beyaz arka plan, açık kartlar
+    private val _lightMode = MutableStateFlow(prefs.getBoolean(KEY_LIGHT_MODE, false))
+    val lightMode: StateFlow<Boolean> = _lightMode.asStateFlow()
+
+    fun setLightMode(light: Boolean) {
+        _lightMode.value = light
+        prefs.edit().putBoolean(KEY_LIGHT_MODE, light).apply()
     }
 
     /** Yeni listeyi oluşturur ve id'sini döner. */
@@ -182,5 +194,6 @@ class ListRepository(context: Context) {
         const val KEY_TASKS = "tasks"
         const val KEY_HOME_COLOR = "homeColorIndex"
         const val KEY_TASKS_ORDERED = "tasksOrdered"
+        const val KEY_LIGHT_MODE = "lightMode"
     }
 }

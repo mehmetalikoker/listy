@@ -17,7 +17,15 @@ class ListsViewModel(application: Application) : AndroidViewModel(application) {
     val tasks: StateFlow<List<Task>> = repository.tasks
     val homeColorIndex: StateFlow<Int?> = repository.homeColorIndex
 
+    val lightMode: StateFlow<Boolean> = repository.lightMode
+
     fun setHomeColor(colorIndex: Int) = repository.setHomeColor(colorIndex)
+
+    /** Koyu/açık görünüm seçilince ana ekran rengi kalkar, düz arka plan görünür. */
+    fun setLightMode(light: Boolean) {
+        repository.setLightMode(light)
+        repository.setHomeColor(null)
+    }
 
     /** Liste oluşturulursa id'sini, ad boşsa null döner. */
     fun createList(name: String, type: ListType): Long? {

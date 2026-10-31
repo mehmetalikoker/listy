@@ -81,6 +81,8 @@ data class ListSummary(
 fun ListsScreen(
     colorIndex: Int?,
     onChangeColor: (Int) -> Unit,
+    lightMode: Boolean,
+    onChangeLightMode: (Boolean) -> Unit,
     onOpenAbout: () -> Unit,
     lists: List<ListSummary>,
     onOpenList: (Long) -> Unit,
@@ -190,6 +192,8 @@ fun ListsScreen(
             selectedIndex = colorIndex?.mod(ListThemes.size) ?: -1,
             onSelect = onChangeColor,
             onDismiss = { pickingTheme = false },
+            lightMode = lightMode,
+            onSelectMode = onChangeLightMode,
         )
     }
 
@@ -436,6 +440,8 @@ private fun ListsScreenPreview() {
         ListsScreen(
             colorIndex = null,
             onChangeColor = {},
+            lightMode = false,
+            onChangeLightMode = {},
             onOpenAbout = {},
             lists = listOf(
                 ListSummary(1, "Ödemeler", 0, ListType.PAYMENT, 2, 22_000_000),

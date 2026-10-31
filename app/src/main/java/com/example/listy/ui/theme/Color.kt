@@ -1,13 +1,49 @@
 package com.example.listy.ui.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
+/** Görünüme (koyu/açık) göre değişen renkler. */
+data class ListyColors(
+    val background: Color,
+    val cardSurface: Color,
+    val textPrimary: Color,
+    val textSecondary: Color,
+    val divider: Color,
+)
+
 // To Do benzeri koyu tema
-val AppBackground = Color(0xFF0A0A0A)
-val CardSurface = Color(0xFF252525)
-val TextPrimary = Color(0xFFE8E8E8)
-val TextSecondary = Color(0xFF9E9E9E)
-val Divider = Color(0xFF2A2A2A)
+val DarkColors = ListyColors(
+    background = Color(0xFF0A0A0A),
+    cardSurface = Color(0xFF252525),
+    textPrimary = Color(0xFFE8E8E8),
+    textSecondary = Color(0xFF9E9E9E),
+    divider = Color(0xFF2A2A2A),
+)
+
+// Beyaz arka planlı açık tema
+val LightColors = ListyColors(
+    background = Color(0xFFFFFFFF),
+    cardSurface = Color(0xFFF2F2F5),
+    textPrimary = Color(0xFF1C1C1E),
+    textSecondary = Color(0xFF6B6B72),
+    divider = Color(0xFFE2E2E6),
+)
+
+val LocalListyColors = staticCompositionLocalOf { DarkColors }
+
+val AppBackground: Color
+    @Composable @ReadOnlyComposable get() = LocalListyColors.current.background
+val CardSurface: Color
+    @Composable @ReadOnlyComposable get() = LocalListyColors.current.cardSurface
+val TextPrimary: Color
+    @Composable @ReadOnlyComposable get() = LocalListyColors.current.textPrimary
+val TextSecondary: Color
+    @Composable @ReadOnlyComposable get() = LocalListyColors.current.textSecondary
+val Divider: Color
+    @Composable @ReadOnlyComposable get() = LocalListyColors.current.divider
 val Accent = Color(0xFF7B8CDE)
 val EditYellow = Color(0xFFF2C94C)
 val DeleteRed = Color(0xFFE5534B)

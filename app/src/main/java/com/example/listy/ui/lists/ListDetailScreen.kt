@@ -53,6 +53,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -73,7 +74,10 @@ import com.example.listy.data.isCompleted
 import com.example.listy.data.paidAmount
 import com.example.listy.data.remainingAmount
 import java.time.LocalDate
+import com.example.listy.ui.theme.Accent
 import com.example.listy.ui.theme.CardSurface
+import com.example.listy.ui.theme.DarkColors
+import com.example.listy.ui.theme.LightColors
 import com.example.listy.ui.theme.DeleteRed
 import com.example.listy.ui.theme.EditYellow
 import com.example.listy.ui.theme.ListThemes
@@ -483,6 +487,9 @@ internal fun ThemeDialog(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
+    // Verilirse en üstte düz Koyu / Açık seçenekleri çıkar (ana ekran)
+    lightMode: Boolean? = null,
+    onSelectMode: (Boolean) -> Unit = {},
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -490,6 +497,15 @@ internal fun ThemeDialog(
         text = {
             // Seçim anında uygulanır; arka plan değişimi dialog arkasında görünür
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (lightMode != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        ModeSwatch("Koyu", DarkColors.background, selectedIndex < 0 && !lightMode) { onSelectMode(false) }
+                        ModeSwatch("Açık", LightColors.background, selectedIndex < 0 && lightMode) { onSelectMode(true) }
+                    }
+                }
                 ListThemes.withIndex().chunked(4).forEach { row ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -528,6 +544,31 @@ internal fun ThemeDialog(
             TextButton(onClick = onDismiss) { Text("Tamam") }
         },
     )
+}
+
+@Composable
+private fun ModeSwatch(name: String, color: Color, selected: Boolean, onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(color)
+                // Beyaz/siyah daire diyalog zemininde kaybolmasın
+                .border(if (selected) 3.dp else 1.dp, if (selected) Accent else TextSecondary, CircleShape)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selected) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_check),
+                    contentDescription = name,
+                    tint = if (color.luminance() > 0.5f) Color.Black else Color.White,
+                )
+            }
+        }
+        Text(name, style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+    }
 }
 
 @Composable
