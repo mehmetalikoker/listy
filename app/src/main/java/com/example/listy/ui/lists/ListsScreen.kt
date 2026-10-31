@@ -75,6 +75,7 @@ data class ListSummary(
 fun ListsScreen(
     colorIndex: Int?,
     onChangeColor: (Int) -> Unit,
+    onOpenAbout: () -> Unit,
     lists: List<ListSummary>,
     onOpenList: (Long) -> Unit,
     onCreateList: (String, ListType) -> Unit,
@@ -108,6 +109,13 @@ fun ListsScreen(
                 Icon(
                     painter = painterResource(R.drawable.ic_palette),
                     contentDescription = "Tema",
+                    tint = if (themed) Color.White else TextSecondary,
+                )
+            }
+            IconButton(onClick = onOpenAbout) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_info),
+                    contentDescription = "Hakkında",
                     tint = if (themed) Color.White else TextSecondary,
                 )
             }
@@ -397,6 +405,7 @@ private fun ListsScreenPreview() {
         ListsScreen(
             colorIndex = null,
             onChangeColor = {},
+            onOpenAbout = {},
             lists = listOf(
                 ListSummary(1, "Ödemeler", 0, ListType.PAYMENT, 2, 22_000_000),
                 ListSummary(2, "TO DO", 1, ListType.TODO, 4, 0),

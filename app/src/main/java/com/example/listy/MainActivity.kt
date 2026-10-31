@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.listy.data.isCompleted
 import com.example.listy.data.remainingAmount
+import com.example.listy.ui.about.AboutScreen
 import com.example.listy.ui.lists.ListDetailScreen
 import com.example.listy.ui.lists.ListSummary
 import com.example.listy.ui.lists.ListsScreen
@@ -66,13 +67,18 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
     val tasks by viewModel.tasks.collectAsState()
     val homeColorIndex by viewModel.homeColorIndex.collectAsState()
     var openListId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var showAbout by rememberSaveable { mutableStateOf(false) }
 
     val openList = lists.find { it.id == openListId }
 
-    if (openList == null) {
+    if (showAbout) {
+        BackHandler { showAbout = false }
+        AboutScreen(onBack = { showAbout = false })
+    } else if (openList == null) {
         ListsScreen(
             colorIndex = homeColorIndex,
             onChangeColor = viewModel::setHomeColor,
+            onOpenAbout = { showAbout = true },
             lists = lists.map { list ->
                 ListSummary(
                     id = list.id,
