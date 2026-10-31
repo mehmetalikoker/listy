@@ -34,6 +34,10 @@ class ListsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteList(listId: Long) = repository.deleteList(listId)
 
+    fun reorderLists(ids: List<Long>) = repository.reorderLists(ids)
+
+    fun reorderTasks(ids: List<Long>) = repository.reorderTasks(ids)
+
     /** [amount] kuruş cinsinden; sadece ödeme listelerinde verilir. */
     fun addTask(listId: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) {
         val trimmed = title.trim()

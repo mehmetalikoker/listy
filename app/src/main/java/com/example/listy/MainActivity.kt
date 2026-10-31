@@ -94,6 +94,7 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
             onOpenList = { openListId = it },
             onRenameList = viewModel::renameList,
             onDeleteList = viewModel::deleteList,
+            onReorderLists = viewModel::reorderLists,
             // To Do gibi: yeni liste oluşunca direkt içine gir
             onCreateList = { name, type -> viewModel.createList(name, type)?.let { openListId = it } },
         )
@@ -112,6 +113,7 @@ private fun ListyApp(viewModel: ListsViewModel = viewModel()) {
             onToggleDone = viewModel::toggleDone,
             onEditTask = viewModel::editTask,
             onDeleteTask = viewModel::deleteTask,
+            onReorderTasks = viewModel::reorderTasks,
         )
     }
 }

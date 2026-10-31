@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -42,7 +43,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -59,6 +63,8 @@ import com.example.listy.ui.theme.ListyTheme
 import com.example.listy.ui.theme.TextSecondary
 import com.example.listy.ui.theme.listColor
 import com.example.listy.ui.theme.listFabColor
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /** Ana ekranda gösterilecek liste özeti. */
 data class ListSummary(
@@ -81,6 +87,7 @@ fun ListsScreen(
     onCreateList: (String, ListType) -> Unit,
     onRenameList: (id: Long, name: String) -> Unit,
     onDeleteList: (Long) -> Unit,
+    onReorderLists: (List<Long>) -> Unit,
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -129,19 +136,42 @@ fun ListsScreen(
             if (lists.isEmpty()) {
                 EmptyState(themed)
             } else {
+                // Sürüklerken yerel kopya değişir, bırakınca sıra kaydedilir
+                var ordered by remember(lists) { mutableStateOf(lists) }
+                val listState = rememberLazyListState()
+                val reorderState = rememberReorderableLazyListState(listState) { from, to ->
+                    ordered = ordered.toMutableList().apply {
+                        add(indexOfFirst { it.id == to.key }, removeAt(indexOfFirst { it.id == from.key }))
+                    }
+                }
+                val haptic = LocalHapticFeedback.current
+                val background = if (themed) listColor(colorIndex!!) else MaterialTheme.colorScheme.background
+
                 // Alt boşluk: son satırın ikonları artı butonunun altında kalmasın
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 112.dp),
                 ) {
-                    items(lists, key = { it.id }) { list ->
-                        ListRow(
-                            list = list,
-                            themed = themed,
-                            onClick = { onOpenList(list.id) },
-                            onEdit = { editingId = list.id },
-                            onDelete = { deletingId = list.id },
-                        )
+                    items(ordered, key = { it.id }) { list ->
+                        ReorderableItem(reorderState, key = list.id) { dragging ->
+                            ListRow(
+                                list = list,
+                                themed = themed,
+                                onClick = { onOpenList(list.id) },
+                                onEdit = { editingId = list.id },
+                                onDelete = { deletingId = list.id },
+                                // Basılı tutup sürükle
+                                modifier = Modifier
+                                    .longPressDraggableHandle(
+                                        onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                                        onDragStopped = { onReorderLists(ordered.map { it.id }) },
+                                    )
+                                    .then(
+                                        if (dragging) Modifier.shadow(8.dp).background(background) else Modifier
+                                    ),
+                            )
+                        }
                     }
                 }
             }
@@ -212,11 +242,12 @@ private fun ListRow(
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     // Renkli zeminde liste/sarı/kırmızı tonları kaybolabilir; hepsi beyaz
     val secondary = if (themed) Color.White.copy(alpha = 0.8f) else TextSecondary
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
@@ -414,6 +445,7 @@ private fun ListsScreenPreview() {
             onCreateList = { _, _ -> },
             onRenameList = { _, _ -> },
             onDeleteList = {},
+            onReorderLists = {},
         )
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -45,6 +46,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -78,6 +82,8 @@ import com.example.listy.ui.theme.TextPrimary
 import com.example.listy.ui.theme.TextSecondary
 import com.example.listy.ui.theme.listColor
 import com.example.listy.ui.theme.listFabColor
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
 fun ListDetailScreen(
@@ -91,6 +97,7 @@ fun ListDetailScreen(
     onToggleDone: (Long) -> Unit,
     onEditTask: (id: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) -> Unit,
     onDeleteTask: (Long) -> Unit,
+    onReorderTasks: (List<Long>) -> Unit,
 ) {
     var adding by rememberSaveable { mutableStateOf(false) }
     var showCompleted by rememberSaveable { mutableStateOf(true) }
@@ -104,9 +111,20 @@ fun ListDetailScreen(
     val today = LocalDate.now()
     val isPayment = type == ListType.PAYMENT
     val isReminder = type == ListType.REMINDER
-    // Yeni eklenen en üstte; hatırlatıcıda tarihi en yakın olan en üstte
-    val openTasks = tasks.filter { !it.isCompleted(today) }.sortedByDescending { it.createdAt }
+    // Elle sıralanır (yeni eklenen en üstte); hatırlatıcı her zaman tarih sırasında
+    val openTasks = tasks.filter { !it.isCompleted(today) }
         .let { if (isReminder) it.sortedBy { task -> task.date } else it }
+    // Sürüklerken yerel kopya değişir, bırakınca sıra kaydedilir
+    var orderedOpen by remember(openTasks) { mutableStateOf(openTasks) }
+    val listState = rememberLazyListState()
+    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
+        val fromIndex = orderedOpen.indexOfFirst { it.id == from.key }
+        val toIndex = orderedOpen.indexOfFirst { it.id == to.key }
+        if (fromIndex >= 0 && toIndex >= 0) {
+            orderedOpen = orderedOpen.toMutableList().apply { add(toIndex, removeAt(fromIndex)) }
+        }
+    }
+    val haptic = LocalHapticFeedback.current
     val doneTasks = tasks.filter { it.isCompleted(today) }.sortedByDescending { it.createdAt }
 
     Box(
@@ -170,18 +188,29 @@ fun ListDetailScreen(
             }
 
             LazyColumn(
+                state = listState,
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 120.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                items(openTasks, key = { it.id }) { task ->
-                    TaskCard(
-                        task = task,
-                        today = today,
-                        onToggleDone = onToggleDone,
-                        onEdit = { editingId = task.id },
-                        onDelete = { deletingId = task.id },
-                    )
+                items(orderedOpen, key = { it.id }) { task ->
+                    ReorderableItem(reorderState, key = task.id, enabled = !isReminder) { dragging ->
+                        TaskCard(
+                            task = task,
+                            today = today,
+                            onToggleDone = onToggleDone,
+                            onEdit = { editingId = task.id },
+                            onDelete = { deletingId = task.id },
+                            // Basılı tutup sürükle
+                            modifier = Modifier
+                                .longPressDraggableHandle(
+                                    enabled = !isReminder,
+                                    onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                                    onDragStopped = { onReorderTasks(orderedOpen.map { it.id }) },
+                                )
+                                .then(if (dragging) Modifier.shadow(8.dp, RoundedCornerShape(6.dp)) else Modifier),
+                        )
+                    }
                 }
                 if (doneTasks.isNotEmpty()) {
                     item(key = "completed-header") {
@@ -278,10 +307,11 @@ private fun TaskCard(
     onToggleDone: (Long) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val completed = task.isCompleted(today)
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
             .background(CardSurface)
@@ -752,6 +782,7 @@ private fun ListDetailPreview() {
             onToggleDone = {},
             onEditTask = { _, _, _, _, _ -> },
             onDeleteTask = {},
+            onReorderTasks = {},
         )
     }
 }

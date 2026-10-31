@@ -54,6 +54,14 @@ class ListRepository(context: Context) {
     }
 
     /** Listeyi içindeki görevlerle birlikte siler. */
+    /** Listeleri verilen id sırasına dizer (sürükle-bırak). */
+    fun reorderLists(ids: List<Long>) {
+        val byId = _lists.value.associateBy { it.id }
+        val ordered = ids.mapNotNull { byId[it] }
+        _lists.value = ordered + _lists.value.filterNot { it.id in ids }
+        saveLists()
+    }
+
     fun deleteList(listId: Long) {
         _lists.value = _lists.value.filterNot { it.id == listId }
         _tasks.value = _tasks.value.filterNot { it.listId == listId }
@@ -63,10 +71,13 @@ class ListRepository(context: Context) {
 
     fun addTask(listId: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) {
         val now = System.currentTimeMillis()
-        _tasks.value += Task(
-            id = now, listId = listId, title = title, createdAt = now,
-            amount = amount, daily = daily, date = date,
-        )
+        // Görev sırası dizideki sıradır; yeni görev en üste
+        _tasks.value = listOf(
+            Task(
+                id = now, listId = listId, title = title, createdAt = now,
+                amount = amount, daily = daily, date = date,
+            )
+        ) + _tasks.value
         saveTasks()
     }
 
@@ -74,6 +85,18 @@ class ListRepository(context: Context) {
 
     fun editTask(taskId: Long, title: String, amount: Long?, daily: Boolean, date: LocalDate?) =
         updateTask(taskId) { it.copy(title = title, amount = amount, daily = daily, date = date) }
+
+    /**
+     * Verilen görevleri, dizide kapladıkları yerler korunarak [ids] sırasına dizer.
+     * Diğer listelerin ve tamamlanmışların yeri değişmez.
+     */
+    fun reorderTasks(ids: List<Long>) {
+        val byId = _tasks.value.associateBy { it.id }
+        val queue = ids.mapNotNull { byId[it] }.iterator()
+        val idSet = ids.toSet()
+        _tasks.value = _tasks.value.map { if (it.id in idSet) queue.next() else it }
+        saveTasks()
+    }
 
     fun deleteTask(taskId: Long) {
         _tasks.value = _tasks.value.filterNot { it.id == taskId }
@@ -95,7 +118,17 @@ class ListRepository(context: Context) {
         )
     }
 
-    private fun loadTasks(): List<Task> = readArray(KEY_TASKS) { obj ->
+    // Eski kayıtlar eklenme sırasıyla tutuluyordu; bir kerelik en yeni üstte olacak şekilde çevrilir
+    private fun loadTasks(): List<Task> {
+        val tasks = readTaskArray()
+        if (prefs.getBoolean(KEY_TASKS_ORDERED, false)) return tasks
+        val ordered = tasks.sortedByDescending { it.createdAt }
+        writeArray(KEY_TASKS, ordered, ::taskToJson)
+        prefs.edit().putBoolean(KEY_TASKS_ORDERED, true).apply()
+        return ordered
+    }
+
+    private fun readTaskArray(): List<Task> = readArray(KEY_TASKS) { obj ->
         Task(
             id = obj.getLong("id"),
             listId = obj.getLong("listId"),
@@ -118,7 +151,9 @@ class ListRepository(context: Context) {
             .put("type", it.type.name)
     }
 
-    private fun saveTasks() = writeArray(KEY_TASKS, _tasks.value) {
+    private fun saveTasks() = writeArray(KEY_TASKS, _tasks.value, ::taskToJson)
+
+    private fun taskToJson(it: Task): JSONObject =
         JSONObject()
             .put("id", it.id)
             .put("listId", it.listId)
@@ -129,7 +164,6 @@ class ListRepository(context: Context) {
             .put("daily", it.daily)
             .apply { it.amount?.let { amount -> put("amount", amount) } }
             .apply { it.date?.let { date -> put("date", date.toString()) } }
-    }
 
     private fun <T> readArray(key: String, parse: (JSONObject) -> T): List<T> {
         val raw = prefs.getString(key, null) ?: return emptyList()
@@ -147,5 +181,6 @@ class ListRepository(context: Context) {
         const val KEY_LISTS = "lists"
         const val KEY_TASKS = "tasks"
         const val KEY_HOME_COLOR = "homeColorIndex"
+        const val KEY_TASKS_ORDERED = "tasksOrdered"
     }
 }
