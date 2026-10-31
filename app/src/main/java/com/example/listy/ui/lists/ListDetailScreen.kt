@@ -109,6 +109,7 @@ fun ListDetailScreen(
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var pickingTheme by rememberSaveable { mutableStateOf(false) }
+    var confirmingReset by rememberSaveable { mutableStateOf(false) }
     val color = listColor(colorIndex)
 
     BackHandler(enabled = adding) { adding = false }
@@ -191,7 +192,7 @@ fun ListDetailScreen(
                             .size(30.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = if (canReset) 0.25f else 0.1f))
-                            .clickable(enabled = canReset, onClick = onResetDone),
+                            .clickable(enabled = canReset) { confirmingReset = true },
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -278,6 +279,23 @@ fun ListDetailScreen(
                     .navigationBarsPadding(),
             )
         }
+    }
+
+    if (confirmingReset) {
+        AlertDialog(
+            onDismissRequest = { confirmingReset = false },
+            title = { Text("Tamamlananlar geri alınsın mı?") },
+            text = { Text("${doneTasks.size} ödemenin tamamlandı işareti kaldırılacak.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onResetDone()
+                    confirmingReset = false
+                }) { Text("Geri al") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingReset = false }) { Text("İptal") }
+            },
+        )
     }
 
     if (pickingTheme) {
