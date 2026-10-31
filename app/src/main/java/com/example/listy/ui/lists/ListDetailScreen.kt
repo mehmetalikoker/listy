@@ -29,7 +29,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -77,6 +76,7 @@ import com.example.listy.ui.theme.ListyTheme
 import com.example.listy.ui.theme.TextPrimary
 import com.example.listy.ui.theme.TextSecondary
 import com.example.listy.ui.theme.listColor
+import com.example.listy.ui.theme.listFabColor
 
 @Composable
 fun ListDetailScreen(
@@ -213,24 +213,14 @@ fun ListDetailScreen(
                     .imePadding(),
             )
         } else {
-            // Beyaz zemin + liste rengi: her temada arka plandan ayrışır
-            FloatingActionButton(
+            AddFab(
                 onClick = { adding = true },
-                containerColor = Color.White,
-                contentColor = color,
-                shape = CircleShape,
+                containerColor = listFabColor(colorIndex),
+                contentDescription = "Görev ekle",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .navigationBarsPadding()
-                    .padding(20.dp)
-                    .size(72.dp),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_add),
-                    contentDescription = "Görev ekle",
-                    modifier = Modifier.size(36.dp),
-                )
-            }
+                    .navigationBarsPadding(),
+            )
         }
     }
 

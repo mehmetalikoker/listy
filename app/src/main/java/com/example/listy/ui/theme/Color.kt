@@ -12,23 +12,26 @@ val Accent = Color(0xFF7B8CDE)
 val EditYellow = Color(0xFFF2C94C)
 val DeleteRed = Color(0xFFE5534B)
 
-data class ListTheme(val name: String, val color: Color)
+// fab: liste içindeki artı butonunun rengi; arka plandan ayrışsın diye zıt tonda
+data class ListTheme(val name: String, val color: Color, val fab: Color)
 
 // Liste temaları: yeni listeye sırayla verilir, liste içinden değiştirilebilir.
 // Kayıtlı listeler index tuttuğu için yeni renkler hep sona eklenmeli.
 val ListThemes = listOf(
-    ListTheme("Pembe", Color(0xFFC9506B)),
-    ListTheme("Mavi", Color(0xFF4A78C9)),
-    ListTheme("Yeşil", Color(0xFF3E9C6E)),
-    ListTheme("Mor", Color(0xFF8A63C9)),
-    ListTheme("Turuncu", Color(0xFFD27C3A)),
-    ListTheme("Turkuaz", Color(0xFF2E9AA6)),
-    ListTheme("Kırmızı", Color(0xFFC62828)),
-    ListTheme("Sarı", Color(0xFFB8901C)),
-    ListTheme("Lacivert", Color(0xFF2C3E8F)),
-    ListTheme("Kahverengi", Color(0xFF795548)),
-    ListTheme("Açık yeşil", Color(0xFF6E9A2E)),
-    ListTheme("Gri", Color(0xFF5F6B7A)),
+    ListTheme("Pembe", Color(0xFFC9506B), Color(0xFF26A69A)),
+    ListTheme("Mavi", Color(0xFF4A78C9), Color(0xFFFFB300)),
+    ListTheme("Yeşil", Color(0xFF3E9C6E), Color(0xFFEC407A)),
+    ListTheme("Mor", Color(0xFF8A63C9), Color(0xFFFFCA28)),
+    ListTheme("Turuncu", Color(0xFFD27C3A), Color(0xFF1E88E5)),
+    ListTheme("Turkuaz", Color(0xFF2E9AA6), Color(0xFFFF7043)),
+    ListTheme("Kırmızı", Color(0xFFC62828), Color(0xFF26C6DA)),
+    ListTheme("Sarı", Color(0xFFB8901C), Color(0xFF5E35B1)),
+    ListTheme("Lacivert", Color(0xFF2C3E8F), Color(0xFFFFB300)),
+    ListTheme("Kahverengi", Color(0xFF795548), Color(0xFF4FC3F7)),
+    ListTheme("Açık yeşil", Color(0xFF6E9A2E), Color(0xFF8E24AA)),
+    ListTheme("Gri", Color(0xFF5F6B7A), Color(0xFFFF8A65)),
 )
 
 fun listColor(index: Int): Color = ListThemes[index.mod(ListThemes.size)].color
+
+fun listFabColor(index: Int): Color = ListThemes[index.mod(ListThemes.size)].fab
